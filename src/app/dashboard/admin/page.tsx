@@ -103,19 +103,7 @@ export default function DashboardAdmin() {
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <h1 className="text-lg md:text-xl font-bold text-slate-800">Data Satker</h1>
         <p className="text-sm text-slate-500 mt-1">Daftar data profil satuan kerja</p>
-
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
-            <p className="text-xs text-slate-500">Total Satker</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{satkerList.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-green-200 p-4 md:p-5">
-            <p className="text-xs text-green-600">Satker Aktif</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{satkerList.length}</p>
-          </div>
-        </div>
-
+        
         {/* Search Bar */}
         <div className="mt-4 md:mt-6 flex flex-wrap items-center gap-2 md:gap-3">
           <div className="relative flex-1 min-w-0">
