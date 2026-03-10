@@ -88,22 +88,44 @@ const empty: ProfilSatker = {
 
 // ─── Komponen di luar agar tidak re-mount setiap render ───────────────────────
 
-const inputCls = "mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
+const inputCls =
+  "mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 const Field = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-xs text-slate-700">{label}</p>
-    <p className="text-sm text-slate-700 font-semibold mt-0.5 break-words">{value || <span className="text-slate-300 font-normal">Belum diisi</span>}</p>
+    <p className="text-sm text-slate-700 font-semibold mt-0.5 break-words">
+      {value || <span className="text-slate-300 font-normal">Belum diisi</span>}
+    </p>
   </div>
 );
 
-const Input = ({ label, field, required, type, form, setForm }: { label: string; field: keyof ProfilSatker; required?: boolean; type?: string; form: ProfilSatker; setForm: React.Dispatch<React.SetStateAction<ProfilSatker>> }) => (
+const Input = ({
+  label,
+  field,
+  required,
+  type,
+  form,
+  setForm,
+}: {
+  label: string;
+  field: keyof ProfilSatker;
+  required?: boolean;
+  type?: string;
+  form: ProfilSatker;
+  setForm: React.Dispatch<React.SetStateAction<ProfilSatker>>;
+}) => (
   <div>
     <label className="text-xs font-medium text-slate-600">
       {label}
       {required && <span className="text-red-500 ml-0.5">*</span>}
     </label>
-    <input type={type || "text"} value={form[field]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className={inputCls} />
+    <input
+      type={type || "text"}
+      value={form[field]}
+      onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+      className={inputCls}
+    />
   </div>
 );
 
@@ -146,8 +168,10 @@ export default function DashboardSatker() {
   const [profil, setProfil] = useState<ProfilSatker>(empty);
   const [showForm, setShowForm] = useState(false);
   const [showModalAkun, setShowModalAkun] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [form, setForm] = useState<ProfilSatker>(empty);
   const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
 
@@ -167,7 +191,10 @@ export default function DashboardSatker() {
         setSatker(data.profiles);
         setNamaSatker(data.profiles?.nama_satker || "");
         if (data.profil) {
-          const clean = { ...empty, ...Object.fromEntries(Object.entries(data.profil).map(([k, v]) => [k, v ?? ""])) } as ProfilSatker;
+          const clean = {
+            ...empty,
+            ...Object.fromEntries(Object.entries(data.profil).map(([k, v]) => [k, v ?? ""])),
+          } as ProfilSatker;
           setProfil(clean);
           setForm(clean);
         }
@@ -196,14 +223,49 @@ export default function DashboardSatker() {
     setSaving(false);
   };
 
+  const handleClearData = async () => {
+    setClearing(true);
+    const res = await fetch("/api/satker/user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profil: empty, namaSatker: satker?.nama_satker }),
+    });
+    if (res.ok) {
+      setProfil(empty);
+      setForm(empty);
+      setShowConfirmClear(false);
+      setSaveMsg("Data profil berhasil dihapus.");
+      setTimeout(() => setSaveMsg(""), 3000);
+    } else {
+      setSaveMsg("Gagal menghapus data.");
+    }
+    setClearing(false);
+  };
+
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "DELETE" });
     window.location.href = "/login";
   };
 
-  const isProfilLengkap = profil.nama_kpa && profil.nama_ppk1 && profil.nama_ppspm && profil.nama_bendahara_pengeluaran && profil.nama_pic1 && profil.nama_pic2;
+  const isProfilLengkap =
+    profil.nama_kpa &&
+    profil.nama_ppk1 &&
+    profil.nama_ppspm &&
+    profil.nama_bendahara_pengeluaran &&
+    profil.nama_pic1 &&
+    profil.nama_pic2;
 
-  const PejabatSummary = ({ label, nama, nip, hp }: { label: string; nama?: string; nip?: string; hp?: string }) => (
+  const PejabatSummary = ({
+    label,
+    nama,
+    nip,
+    hp,
+  }: {
+    label: string;
+    nama?: string;
+    nip?: string;
+    hp?: string;
+  }) => (
     <div>
       <p className="text-xs text-slate-700">{label}</p>
       {nama ? (
@@ -220,7 +282,12 @@ export default function DashboardSatker() {
     </div>
   );
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-slate-700">Memuat...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-slate-700">
+        Memuat...
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -229,7 +296,10 @@ export default function DashboardSatker() {
         sub={satker?.nama_satker || sessionUser?.username || "Satker"}
         onLogout={handleLogout}
         extraButton={
-          <button onClick={() => setShowModalAkun(true)} className="w-full md:w-auto px-4 py-2 border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 text-sm font-medium rounded-lg transition-colors">
+          <button
+            onClick={() => setShowModalAkun(true)}
+            className="w-full md:w-auto px-4 py-2 border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 text-sm font-medium rounded-lg transition-colors"
+          >
             Pengaturan Akun
           </button>
         }
@@ -241,19 +311,31 @@ export default function DashboardSatker() {
             <h1 className="text-lg md:text-xl font-bold text-slate-800">Dashboard Satker</h1>
             <p className="text-sm text-slate-500 mt-1">Kelola data profil satuan kerja Anda</p>
           </div>
-          <button
-            onClick={() => {
-              setForm(profil);
-              setNamaSatker(satker?.nama_satker || "");
-              setShowForm(true);
-            }}
-            className="shrink-0 px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-          >
-            {isProfilLengkap ? "Edit Profil" : "Lengkapi Profil"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowConfirmClear(true)}
+              className="px-3 md:px-4 py-2 border border-red-200 hover:bg-red-50 text-red-500 text-sm rounded-lg transition-colors"
+            >
+              Clear Data
+            </button>
+            <button
+              onClick={() => {
+                setForm(profil);
+                setNamaSatker(satker?.nama_satker || "");
+                setShowForm(true);
+              }}
+              className="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            >
+              {isProfilLengkap ? "Edit Profil" : "Lengkapi Profil"}
+            </button>
+          </div>
         </div>
 
-        {saveMsg && <div className="mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">{saveMsg}</div>}
+        {saveMsg && (
+          <div className="mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+            {saveMsg}
+          </div>
+        )}
 
         {/* Status Cards */}
         <div className="mt-4 md:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
@@ -306,13 +388,16 @@ export default function DashboardSatker() {
         {/* Form Edit */}
         {showForm && (
           <div className="mt-4 md:mt-6 space-y-4">
-            {/* Profil Kantor */}
             <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
               <h2 className="text-sm font-semibold text-slate-700 mb-4">Profil Kantor</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-slate-600">Nama Satker</label>
-                  <input value={namaSatker} onChange={(e) => setNamaSatker(e.target.value)} className={inputCls} />
+                  <input
+                    value={namaSatker}
+                    onChange={(e) => setNamaSatker(e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
                 <Input label="Alamat Lengkap Kantor" field="alamat" form={form} setForm={setForm} />
                 <Input label="Nomor Telp Kantor" field="no_telp" form={form} setForm={setForm} />
@@ -320,7 +405,6 @@ export default function DashboardSatker() {
               </div>
             </div>
 
-            {/* Pejabat Perbendaharaan */}
             <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
               <h2 className="text-sm font-semibold text-slate-700 mb-2">Pejabat Perbendaharaan</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
@@ -336,7 +420,6 @@ export default function DashboardSatker() {
               </div>
             </div>
 
-            {/* PIC / Operator */}
             <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
               <h2 className="text-sm font-semibold text-slate-700 mb-4">PIC / Operator</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -352,16 +435,51 @@ export default function DashboardSatker() {
             </div>
 
             <div className="flex gap-3 justify-end pb-6">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 Batal
               </button>
-              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
                 {saving ? "Menyimpan..." : "Simpan Data"}
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Modal Konfirmasi Clear Data */}
+      {showConfirmClear && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-800 mb-2">Hapus Semua Data Profil?</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Semua data profil kantor, pejabat, dan PIC akan dihapus. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmClear(false)}
+                disabled={clearing}
+                className="flex-1 py-2 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleClearData}
+                disabled={clearing}
+                className="flex-1 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {clearing ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModalAkun && <ModalAkun onClose={() => setShowModalAkun(false)} />}
     </div>
