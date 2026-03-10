@@ -68,6 +68,51 @@ const empty: ProfilSatker = {
   hp_pic4: "",
 };
 
+// ─── Komponen di luar agar tidak re-mount setiap render ───────────────────────
+
+const inputCls =
+  "mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+const Field = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-xs text-slate-400">{label}</p>
+    <p className="text-sm text-slate-700 font-medium mt-0.5 break-words">
+      {value || <span className="text-slate-300 font-normal">Belum diisi</span>}
+    </p>
+  </div>
+);
+
+const Input = ({
+  label,
+  field,
+  required,
+  type,
+  form,
+  setForm,
+}: {
+  label: string;
+  field: keyof ProfilSatker;
+  required?: boolean;
+  type?: string;
+  form: ProfilSatker;
+  setForm: React.Dispatch<React.SetStateAction<ProfilSatker>>;
+}) => (
+  <div>
+    <label className="text-xs font-medium text-slate-600">
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+    <input
+      type={type || "text"}
+      value={form[field]}
+      onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+      className={inputCls}
+    />
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function DashboardSatker() {
   const [sessionUser, setSessionUser] = useState<{ id: string; username: string; nama: string } | null>(null);
   const [satker, setSatker] = useState<{ nama_satker: string; kode_satker: string; status: string } | null>(null);
@@ -96,7 +141,9 @@ export default function DashboardSatker() {
         setSatker(data.profiles);
         setNamaSatker(data.profiles?.nama_satker || "");
         if (data.profil) {
-          const clean = Object.fromEntries(Object.entries(data.profil).map(([k, v]) => [k, v ?? ""])) as ProfilSatker;
+          const clean = Object.fromEntries(
+            Object.entries(data.profil).map(([k, v]) => [k, v ?? ""])
+          ) as ProfilSatker;
           setProfil(clean);
           setForm(clean);
         }
@@ -130,28 +177,20 @@ export default function DashboardSatker() {
     window.location.href = "/login";
   };
 
-  const isProfilLengkap = profil.nama_kpa && profil.nama_ppk1 && profil.nama_ppspm && profil.nama_bendahara_pengeluaran && profil.nama_pic1 && profil.nama_pic2;
+  const isProfilLengkap =
+    profil.nama_kpa &&
+    profil.nama_ppk1 &&
+    profil.nama_ppspm &&
+    profil.nama_bendahara_pengeluaran &&
+    profil.nama_pic1 &&
+    profil.nama_pic2;
 
-  const inputCls = "mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
-
-  const Field = ({ label, value }: { label: string; value: string }) => (
-    <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-sm text-slate-700 font-medium mt-0.5 break-words">{value || <span className="text-slate-300 font-normal">Belum diisi</span>}</p>
-    </div>
-  );
-
-  const Input = ({ label, field, required, type }: { label: string; field: keyof ProfilSatker; required?: boolean; type?: string }) => (
-    <div>
-      <label className="text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
-      <input type={type || "text"} value={form[field]} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className={inputCls} />
-    </div>
-  );
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-sm text-slate-400">Memuat...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-slate-400">
+        Memuat...
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -160,7 +199,10 @@ export default function DashboardSatker() {
         sub={satker?.nama_satker || sessionUser?.username || "Satker"}
         onLogout={handleLogout}
         extraButton={
-          <button onClick={() => setShowModalAkun(true)} className="w-full md:w-auto px-4 py-2 border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 text-sm font-medium rounded-lg transition-colors">
+          <button
+            onClick={() => setShowModalAkun(true)}
+            className="w-full md:w-auto px-4 py-2 border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 text-sm font-medium rounded-lg transition-colors"
+          >
             Pengaturan Akun
           </button>
         }
@@ -184,19 +226,35 @@ export default function DashboardSatker() {
           </button>
         </div>
 
-        {saveMsg && <div className="mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">{saveMsg}</div>}
+        {saveMsg && (
+          <div className="mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+            {saveMsg}
+          </div>
+        )}
 
         {/* Status Cards */}
         <div className="mt-4 md:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
             <p className="text-xs text-slate-400">Status Akun</p>
-            <span className={`mt-2 inline-block px-2 py-1 rounded-full text-xs font-medium ${satker?.status === "aktif" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+            <span
+              className={`mt-2 inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                satker?.status === "aktif"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
               {satker?.status === "aktif" ? "Aktif" : "Menunggu Approval"}
             </span>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
             <p className="text-xs text-slate-400">Kelengkapan Profil</p>
-            <p className={`text-sm font-semibold mt-2 ${isProfilLengkap ? "text-green-600" : "text-amber-600"}`}>{isProfilLengkap ? "Lengkap" : "Belum Lengkap"}</p>
+            <p
+              className={`text-sm font-semibold mt-2 ${
+                isProfilLengkap ? "text-green-600" : "text-amber-600"
+              }`}
+            >
+              {isProfilLengkap ? "Lengkap" : "Belum Lengkap"}
+            </p>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
             <p className="text-xs text-slate-400">Satuan Kerja</p>
@@ -252,57 +310,68 @@ export default function DashboardSatker() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-slate-600">Nama Satker</label>
-                  <input value={namaSatker} onChange={(e) => setNamaSatker(e.target.value)} className={inputCls} />
+                  <input
+                    value={namaSatker}
+                    onChange={(e) => setNamaSatker(e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
-                <Input label="Alamat Lengkap Kantor" field="alamat" />
-                <Input label="Nomor Telp Kantor" field="no_telp" />
-                <Input label="Email Kantor" field="email" type="email" />
+                <Input label="Alamat Lengkap Kantor" field="alamat" form={form} setForm={setForm} />
+                <Input label="Nomor Telp Kantor" field="no_telp" form={form} setForm={setForm} />
+                <Input label="Email Kantor" field="email" type="email" form={form} setForm={setForm} />
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
               <h2 className="text-sm font-semibold text-slate-700 mb-4">Pejabat Perbendaharaan</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Nama KPA" field="nama_kpa" />
-                <Input label="NIP/NRP KPA" field="nip_kpa" />
-                <Input label="Nama PPK 1" field="nama_ppk1" required />
-                <Input label="NIP PPK 1" field="nip_ppk1" required />
-                <Input label="Nama PPK 2" field="nama_ppk2" />
-                <Input label="NIP PPK 2" field="nip_ppk2" />
-                <Input label="Nama PPK 3" field="nama_ppk3" />
-                <Input label="NIP PPK 3" field="nip_ppk3" />
-                <Input label="Nama PPK 4" field="nama_ppk4" />
-                <Input label="NIP PPK 4" field="nip_ppk4" />
-                <Input label="Nama PPSPM" field="nama_ppspm" required />
-                <Input label="NIP/NRP PPSPM" field="nip_ppspm" required />
-                <Input label="Nama Bendahara Pengeluaran" field="nama_bendahara_pengeluaran" required />
-                <Input label="NIP/NRP Bendahara Pengeluaran" field="nip_bendahara_pengeluaran" required />
-                <Input label="Nama Bendahara Penerimaan" field="nama_bendahara_penerimaan" />
-                <Input label="NIP/NRP Bendahara Penerimaan" field="nip_bendahara_penerimaan" />
-                <Input label="Nama Bendahara Pembantu" field="nama_bendahara_pembantu" />
-                <Input label="NIP/NRP Bendahara Pembantu" field="nip_bendahara_pembantu" />
+                <Input label="Nama KPA" field="nama_kpa" form={form} setForm={setForm} />
+                <Input label="NIP/NRP KPA" field="nip_kpa" form={form} setForm={setForm} />
+                <Input label="Nama PPK 1" field="nama_ppk1" required form={form} setForm={setForm} />
+                <Input label="NIP PPK 1" field="nip_ppk1" required form={form} setForm={setForm} />
+                <Input label="Nama PPK 2" field="nama_ppk2" form={form} setForm={setForm} />
+                <Input label="NIP PPK 2" field="nip_ppk2" form={form} setForm={setForm} />
+                <Input label="Nama PPK 3" field="nama_ppk3" form={form} setForm={setForm} />
+                <Input label="NIP PPK 3" field="nip_ppk3" form={form} setForm={setForm} />
+                <Input label="Nama PPK 4" field="nama_ppk4" form={form} setForm={setForm} />
+                <Input label="NIP PPK 4" field="nip_ppk4" form={form} setForm={setForm} />
+                <Input label="Nama PPSPM" field="nama_ppspm" required form={form} setForm={setForm} />
+                <Input label="NIP/NRP PPSPM" field="nip_ppspm" required form={form} setForm={setForm} />
+                <Input label="Nama Bendahara Pengeluaran" field="nama_bendahara_pengeluaran" required form={form} setForm={setForm} />
+                <Input label="NIP/NRP Bendahara Pengeluaran" field="nip_bendahara_pengeluaran" required form={form} setForm={setForm} />
+                <Input label="Nama Bendahara Penerimaan" field="nama_bendahara_penerimaan" form={form} setForm={setForm} />
+                <Input label="NIP/NRP Bendahara Penerimaan" field="nip_bendahara_penerimaan" form={form} setForm={setForm} />
+                <Input label="Nama Bendahara Pembantu" field="nama_bendahara_pembantu" form={form} setForm={setForm} />
+                <Input label="NIP/NRP Bendahara Pembantu" field="nip_bendahara_pembantu" form={form} setForm={setForm} />
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5">
               <h2 className="text-sm font-semibold text-slate-700 mb-4">PIC / Operator</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Nama PIC/Operator 1" field="nama_pic1" required />
-                <Input label="No. HP PIC/Operator 1" field="hp_pic1" required />
-                <Input label="Nama PIC/Operator 2" field="nama_pic2" required />
-                <Input label="No. HP PIC/Operator 2" field="hp_pic2" required />
-                <Input label="Nama PIC/Operator 3" field="nama_pic3" />
-                <Input label="No. HP PIC/Operator 3" field="hp_pic3" />
-                <Input label="Nama PIC/Operator 4" field="nama_pic4" />
-                <Input label="No. HP PIC/Operator 4" field="hp_pic4" />
+                <Input label="Nama PIC/Operator 1" field="nama_pic1" required form={form} setForm={setForm} />
+                <Input label="No. HP PIC/Operator 1" field="hp_pic1" required form={form} setForm={setForm} />
+                <Input label="Nama PIC/Operator 2" field="nama_pic2" required form={form} setForm={setForm} />
+                <Input label="No. HP PIC/Operator 2" field="hp_pic2" required form={form} setForm={setForm} />
+                <Input label="Nama PIC/Operator 3" field="nama_pic3" form={form} setForm={setForm} />
+                <Input label="No. HP PIC/Operator 3" field="hp_pic3" form={form} setForm={setForm} />
+                <Input label="Nama PIC/Operator 4" field="nama_pic4" form={form} setForm={setForm} />
+                <Input label="No. HP PIC/Operator 4" field="hp_pic4" form={form} setForm={setForm} />
               </div>
             </div>
 
             <div className="flex gap-3 justify-end pb-6">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 Batal
               </button>
-              <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
                 {saving ? "Menyimpan..." : "Simpan Data"}
               </button>
             </div>
