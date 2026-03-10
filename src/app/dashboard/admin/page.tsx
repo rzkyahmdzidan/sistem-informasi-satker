@@ -66,7 +66,9 @@ export default function DashboardAdmin() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchSatker(); }, []);
+  useEffect(() => {
+    fetchSatker();
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "DELETE" });
@@ -86,17 +88,33 @@ export default function DashboardAdmin() {
     setProfilLoading(false);
   };
 
-  const filtered = satkerList.filter((s) =>
-    s.nama_satker?.toLowerCase().includes(search.toLowerCase()) ||
-    s.kode_satker?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = satkerList.filter((s) => s.nama_satker?.toLowerCase().includes(search.toLowerCase()) || s.kode_satker?.toLowerCase().includes(search.toLowerCase()));
 
   const Field = ({ label, value }: { label: string; value?: string }) => (
     <div>
       <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-sm text-slate-700 font-medium mt-0.5 break-words">
-        {value || <span className="text-slate-300 font-normal italic">Belum diisi</span>}
-      </p>
+      <p className="text-sm text-slate-700 font-medium mt-0.5 break-words">{value || <span className="text-slate-300 font-normal italic">Belum diisi</span>}</p>
+    </div>
+  );
+
+  const InfoCard = ({ label, value }: { label: string; value?: string }) => (
+    <div>
+      <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+      <p className="text-sm text-slate-800">{value || <span className="text-slate-300 italic">Belum diisi</span>}</p>
+    </div>
+  );
+
+  const PejabatCard = ({ jabatan, nama, nip }: { jabatan: string; nama?: string; nip?: string }) => (
+    <div className="py-3 border-b border-slate-100 last:border-0">
+      <p className="text-xs text-slate-400 mb-0.5">{jabatan}</p>
+      {nama ? (
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium text-slate-800">{nama}</p>
+          <p className="text-xs text-slate-400 font-mono shrink-0">{nip}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-300 italic">Belum diisi</p>
+      )}
     </div>
   );
 
@@ -132,7 +150,9 @@ export default function DashboardAdmin() {
             />
           </div>
           {search && (
-            <button onClick={() => setSearch("")} className="text-xs text-slate-400 hover:text-slate-600 shrink-0">Reset</button>
+            <button onClick={() => setSearch("")} className="text-xs text-slate-400 hover:text-slate-600 shrink-0">
+              Reset
+            </button>
           )}
           <p className="text-xs text-slate-400 shrink-0">{filtered.length} ditemukan</p>
         </div>
@@ -142,9 +162,7 @@ export default function DashboardAdmin() {
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-400">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400">
-              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
-            </div>
+            <div className="p-8 text-center text-sm text-slate-400">{search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -160,9 +178,7 @@ export default function DashboardAdmin() {
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-600">{s.kode_satker || "-"}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">
-                      {new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">{new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</td>
                     <td className="px-4 py-3">
                       <button onClick={() => openDetail(s)} className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors">
                         Lihat Detail
@@ -180,75 +196,104 @@ export default function DashboardAdmin() {
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-400">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400">
-              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
-            </div>
-          ) : filtered.map((s) => (
-            <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
-              <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-              </p>
-              <button onClick={() => openDetail(s)} className="mt-3 w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors">
-                Lihat Detail
-              </button>
-            </div>
-          ))}
+            <div className="p-8 text-center text-sm text-slate-400">{search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}</div>
+          ) : (
+            filtered.map((s) => (
+              <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
+                <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                <button onClick={() => openDetail(s)} className="mt-3 w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors">
+                  Lihat Detail
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* Modal Detail */}
       {showDetail && selectedSatker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-              <div className="min-w-0 pr-4">
-                <h2 className="text-sm font-bold text-slate-800 break-words">{selectedSatker.nama_satker}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Kode Satker: {selectedSatker.kode_satker}</p>
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg w-full md:max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-xs text-slate-400 mb-0.5">{selectedSatker.kode_satker}</p>
+                <h2 className="text-sm font-semibold text-slate-800 leading-snug">{selectedSatker.nama_satker}</h2>
               </div>
-              <button onClick={() => setShowDetail(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none shrink-0">&times;</button>
+              <button onClick={() => setShowDetail(false)} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 transition-colors">
+                &times;
+              </button>
             </div>
-            <div className="px-4 md:px-6 py-5 space-y-5">
+
+            {/* Body */}
+            <div className="overflow-y-auto px-6 py-5 space-y-7 flex-1">
               {profilLoading ? (
-                <div className="py-12 text-center text-sm text-slate-400">Memuat profil...</div>
+                <div className="py-16 text-center text-sm text-slate-400">Memuat data...</div>
               ) : !selectedProfil ? (
-                <div className="py-12 text-center text-sm text-slate-400">Satker belum mengisi data profil.</div>
+                <div className="py-16 text-center text-sm text-slate-400">Satker belum mengisi data profil.</div>
               ) : (
                 <>
-                  <div>
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Profil Kantor</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field label="Alamat Kantor" value={selectedProfil.alamat} />
-                      <Field label="No. Telp Kantor" value={selectedProfil.no_telp} />
-                      <Field label="Email Kantor" value={selectedProfil.email} />
+                  {/* Profil Kantor */}
+                  <section>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Profil Kantor</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                      <div className="sm:col-span-2">
+                        <InfoCard label="Alamat" value={selectedProfil.alamat} />
+                      </div>
+                      <InfoCard label="No. Telepon" value={selectedProfil.no_telp} />
+                      <InfoCard label="Email" value={selectedProfil.email} />
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Pejabat Perbendaharaan</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field label="KPA" value={selectedProfil.nama_kpa ? `${selectedProfil.nama_kpa} / ${selectedProfil.nip_kpa}` : ""} />
-                      <Field label="PPK 1" value={selectedProfil.nama_ppk1 ? `${selectedProfil.nama_ppk1} / ${selectedProfil.nip_ppk1}` : ""} />
-                      <Field label="PPK 2" value={selectedProfil.nama_ppk2 ? `${selectedProfil.nama_ppk2} / ${selectedProfil.nip_ppk2}` : ""} />
-                      <Field label="PPK 3" value={selectedProfil.nama_ppk3 ? `${selectedProfil.nama_ppk3} / ${selectedProfil.nip_ppk3}` : ""} />
-                      <Field label="PPK 4" value={selectedProfil.nama_ppk4 ? `${selectedProfil.nama_ppk4} / ${selectedProfil.nip_ppk4}` : ""} />
-                      <Field label="PPSPM" value={selectedProfil.nama_ppspm ? `${selectedProfil.nama_ppspm} / ${selectedProfil.nip_ppspm}` : ""} />
-                      <Field label="Bendahara Pengeluaran" value={selectedProfil.nama_bendahara_pengeluaran ? `${selectedProfil.nama_bendahara_pengeluaran} / ${selectedProfil.nip_bendahara_pengeluaran}` : ""} />
-                      <Field label="Bendahara Penerimaan" value={selectedProfil.nama_bendahara_penerimaan ? `${selectedProfil.nama_bendahara_penerimaan} / ${selectedProfil.nip_bendahara_penerimaan}` : ""} />
-                      <Field label="Bendahara Pembantu" value={selectedProfil.nama_bendahara_pembantu ? `${selectedProfil.nama_bendahara_pembantu} / ${selectedProfil.nip_bendahara_pembantu}` : ""} />
+                  </section>
+
+                  <hr className="border-slate-100" />
+
+                  {/* Pejabat */}
+                  <section>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Pejabat Perbendaharaan</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+                      <div>
+                        <PejabatCard jabatan="KPA" nama={selectedProfil.nama_kpa} nip={selectedProfil.nip_kpa} />
+                        <PejabatCard jabatan="PPK 1" nama={selectedProfil.nama_ppk1} nip={selectedProfil.nip_ppk1} />
+                        <PejabatCard jabatan="PPK 2" nama={selectedProfil.nama_ppk2} nip={selectedProfil.nip_ppk2} />
+                        <PejabatCard jabatan="PPK 3" nama={selectedProfil.nama_ppk3} nip={selectedProfil.nip_ppk3} />
+                        <PejabatCard jabatan="PPK 4" nama={selectedProfil.nama_ppk4} nip={selectedProfil.nip_ppk4} />
+                      </div>
+                      <div>
+                        <PejabatCard jabatan="PPSPM" nama={selectedProfil.nama_ppspm} nip={selectedProfil.nip_ppspm} />
+                        <PejabatCard jabatan="Bendahara Pengeluaran" nama={selectedProfil.nama_bendahara_pengeluaran} nip={selectedProfil.nip_bendahara_pengeluaran} />
+                        <PejabatCard jabatan="Bendahara Penerimaan" nama={selectedProfil.nama_bendahara_penerimaan} nip={selectedProfil.nip_bendahara_penerimaan} />
+                        <PejabatCard jabatan="Bendahara Pembantu" nama={selectedProfil.nama_bendahara_pembantu} nip={selectedProfil.nip_bendahara_pembantu} />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">PIC / Operator</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Field label="PIC/Operator 1" value={selectedProfil.nama_pic1 ? `${selectedProfil.nama_pic1} / ${selectedProfil.hp_pic1}` : ""} />
-                      <Field label="PIC/Operator 2" value={selectedProfil.nama_pic2 ? `${selectedProfil.nama_pic2} / ${selectedProfil.hp_pic2}` : ""} />
-                      <Field label="PIC/Operator 3" value={selectedProfil.nama_pic3 ? `${selectedProfil.nama_pic3} / ${selectedProfil.hp_pic3}` : ""} />
-                      <Field label="PIC/Operator 4" value={selectedProfil.nama_pic4 ? `${selectedProfil.nama_pic4} / ${selectedProfil.hp_pic4}` : ""} />
+                  </section>
+
+                  <hr className="border-slate-100" />
+
+                  {/* PIC */}
+                  <section>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">PIC / Operator</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+                      <div>
+                        <PejabatCard jabatan="PIC 1" nama={selectedProfil.nama_pic1} nip={selectedProfil.hp_pic1} />
+                        <PejabatCard jabatan="PIC 2" nama={selectedProfil.nama_pic2} nip={selectedProfil.hp_pic2} />
+                      </div>
+                      <div>
+                        <PejabatCard jabatan="PIC 3" nama={selectedProfil.nama_pic3} nip={selectedProfil.hp_pic3} />
+                        <PejabatCard jabatan="PIC 4" nama={selectedProfil.nama_pic4} nip={selectedProfil.hp_pic4} />
+                      </div>
                     </div>
-                  </div>
+                  </section>
                 </>
               )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-slate-100">
+              <button onClick={() => setShowDetail(false)} className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                Tutup
+              </button>
             </div>
           </div>
         </div>
