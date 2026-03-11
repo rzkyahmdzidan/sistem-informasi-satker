@@ -53,6 +53,23 @@ type ProfilSatker = {
   hp_pic4: string;
 };
 
+const emptyProfil: ProfilSatker = {
+  alamat: "", no_telp: "", email: "",
+  nama_kpa: "", nip_kpa: "", hp_kpa: "",
+  nama_ppk1: "", nip_ppk1: "", hp_ppk1: "",
+  nama_ppk2: "", nip_ppk2: "", hp_ppk2: "",
+  nama_ppk3: "", nip_ppk3: "", hp_ppk3: "",
+  nama_ppk4: "", nip_ppk4: "", hp_ppk4: "",
+  nama_ppspm: "", nip_ppspm: "", hp_ppspm: "",
+  nama_bendahara_pengeluaran: "", nip_bendahara_pengeluaran: "", hp_bendahara_pengeluaran: "",
+  nama_bendahara_penerimaan: "", nip_bendahara_penerimaan: "", hp_bendahara_penerimaan: "",
+  nama_bendahara_pembantu: "", nip_bendahara_pembantu: "", hp_bendahara_pembantu: "",
+  nama_pic1: "", hp_pic1: "",
+  nama_pic2: "", hp_pic2: "",
+  nama_pic3: "", hp_pic3: "",
+  nama_pic4: "", hp_pic4: "",
+};
+
 const NAV_ITEMS = [
   { label: "Data Satker", href: "/dashboard/admin" },
   { label: "Kelola User", href: "/dashboard/admin/kelola" },
@@ -62,7 +79,7 @@ const NAV_ITEMS = [
 
 const InfoRow = ({ label, value }: { label: string; value?: string }) => (
   <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
-    <p className="text-xs text-slate-700 shrink-0 w-32">{label}</p>
+    <p className="text-xs text-slate-500 shrink-0 w-32">{label}</p>
     <p className="text-xs text-slate-800 text-right break-words">
       {value || <span className="text-slate-300 italic">Belum diisi</span>}
     </p>
@@ -70,30 +87,24 @@ const InfoRow = ({ label, value }: { label: string; value?: string }) => (
 );
 
 const PejabatCard = ({
-  jabatan,
-  nama,
-  nip,
-  hp,
+  jabatan, nama, nip, hp,
 }: {
-  jabatan: string;
-  nama?: string;
-  nip?: string;
-  hp?: string;
+  jabatan: string; nama?: string; nip?: string; hp?: string;
 }) => (
   <div className="p-3 rounded-lg border border-slate-100 bg-slate-50">
-    <p className="text-xs font-semibold text-slate-700 mb-2">{jabatan}</p>
+    <p className="text-xs font-semibold text-slate-500 mb-2">{jabatan}</p>
     {nama ? (
       <div className="space-y-1">
         <p className="text-sm font-medium text-slate-800">{nama}</p>
         {nip && (
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-700">NIP</span>
+            <span className="text-xs text-slate-400">NIP</span>
             <span className="text-xs text-slate-700">{nip}</span>
           </div>
         )}
         {hp && (
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-700">HP</span>
+            <span className="text-xs text-slate-400">HP</span>
             <span className="text-xs text-slate-700">{hp}</span>
           </div>
         )}
@@ -104,17 +115,78 @@ const PejabatCard = ({
   </div>
 );
 
+// Input field untuk form edit
+const FormField = ({
+  label, value, onChange, placeholder,
+}: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) => (
+  <div>
+    <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder || `Isi ${label.toLowerCase()}...`}
+      className="w-full px-3 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white transition-all"
+    />
+  </div>
+);
+
+// Group 3 field pejabat (nama, nip, hp)
+const PejabatFormGroup = ({
+  jabatan, prefix, form, setForm, withNip = true,
+}: {
+  jabatan: string;
+  prefix: string;
+  form: ProfilSatker;
+  setForm: (f: ProfilSatker) => void;
+  withNip?: boolean;
+}) => (
+  <div className="p-3 rounded-lg border border-slate-100 bg-slate-50 space-y-2">
+    <p className="text-xs font-semibold text-slate-600">{jabatan}</p>
+    <FormField
+      label="Nama"
+      value={(form as any)[`nama_${prefix}`] || ""}
+      onChange={(v) => setForm({ ...form, [`nama_${prefix}`]: v })}
+    />
+    {withNip && (
+      <FormField
+        label="NIP"
+        value={(form as any)[`nip_${prefix}`] || ""}
+        onChange={(v) => setForm({ ...form, [`nip_${prefix}`]: v })}
+      />
+    )}
+    <FormField
+      label="HP"
+      value={(form as any)[`hp_${prefix}`] || ""}
+      onChange={(v) => setForm({ ...form, [`hp_${prefix}`]: v })}
+    />
+  </div>
+);
+
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function DashboardAdmin() {
   const [satkerList, setSatkerList] = useState<Satker[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Detail modal
   const [showDetail, setShowDetail] = useState(false);
   const [selectedSatker, setSelectedSatker] = useState<Satker | null>(null);
   const [selectedProfil, setSelectedProfil] = useState<ProfilSatker | null>(null);
   const [profilLoading, setProfilLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"kantor" | "pejabat" | "pic">("kantor");
+
+  // Edit modal
+  const [showEdit, setShowEdit] = useState(false);
+  const [editSatker, setEditSatker] = useState<Satker | null>(null);
+  const [editForm, setEditForm] = useState<ProfilSatker>(emptyProfil);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editTab, setEditTab] = useState<"kantor" | "pejabat" | "pic">("kantor");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
   const fetchSatker = async () => {
     setLoading(true);
@@ -147,11 +219,60 @@ export default function DashboardAdmin() {
     setProfilLoading(false);
   };
 
+  const openEdit = async (satker: Satker) => {
+    setEditSatker(satker);
+    setEditForm(emptyProfil);
+    setShowEdit(true);
+    setEditTab("kantor");
+    setSaveMsg("");
+    setEditLoading(true);
+    const res = await fetch(`/api/satker/profil?id=${satker.id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setEditForm({ ...emptyProfil, ...(data.profil || {}) });
+    }
+    setEditLoading(false);
+  };
+
+  const handleSave = async () => {
+    if (!editSatker) return;
+    setSaving(true);
+    setSaveMsg("");
+    const res = await fetch("/api/satker", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editSatker.id,
+        profil: editForm,
+      }),
+    });
+    if (res.ok) {
+      setSaveMsg("✓ Data berhasil disimpan");
+      // Kalau modal detail sedang buka untuk satker yang sama, refresh profilnya
+      if (selectedSatker?.id === editSatker.id) {
+        setSelectedProfil({ ...editForm });
+      }
+      setTimeout(() => {
+        setSaveMsg("");
+        setShowEdit(false);
+      }, 1500);
+    } else {
+      setSaveMsg("✗ Gagal menyimpan. Coba lagi.");
+    }
+    setSaving(false);
+  };
+
   const filtered = satkerList.filter(
     (s) =>
       s.nama_satker?.toLowerCase().includes(search.toLowerCase()) ||
       s.kode_satker?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const TABS = [
+    { key: "kantor", label: "Profil Kantor" },
+    { key: "pejabat", label: "Pejabat" },
+    { key: "pic", label: "PIC / Operator" },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -166,12 +287,12 @@ export default function DashboardAdmin() {
 
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <h1 className="text-lg md:text-xl font-bold text-slate-800">Data Satker</h1>
-        <p className="text-sm text-slate-700 mt-1">Daftar data profil satuan kerja</p>
+        <p className="text-sm text-slate-500 mt-1">Daftar data profil satuan kerja</p>
 
         {/* Search Bar */}
         <div className="mt-4 md:mt-6 flex flex-wrap items-center gap-2 md:gap-3">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -180,29 +301,29 @@ export default function DashboardAdmin() {
             />
           </div>
           {search && (
-            <button onClick={() => setSearch("")} className="text-xs text-slate-700 hover:text-slate-600 shrink-0">
+            <button onClick={() => setSearch("")} className="text-xs text-slate-500 hover:text-slate-700 shrink-0">
               Reset
             </button>
           )}
-          <p className="text-xs text-slate-700 shrink-0">{filtered.length} ditemukan</p>
+          <p className="text-xs text-slate-500 shrink-0">{filtered.length} ditemukan</p>
         </div>
 
         {/* Table — desktop */}
         <div className="mt-3 bg-white rounded-xl border border-slate-200 overflow-hidden hidden md:block">
           {loading ? (
-            <div className="p-8 text-center text-sm text-slate-700">Memuat data...</div>
+            <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-700">
+            <div className="p-8 text-center text-sm text-slate-500">
               {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-700">Nama Satker</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-700">Kode Satker</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-700">Tanggal Daftar</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-700">Aksi</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Nama Satker</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Kode Satker</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Tanggal Daftar</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -210,20 +331,26 @@ export default function DashboardAdmin() {
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-600">{s.kode_satker || "-"}</td>
-                    <td className="px-4 py-3 text-slate-700 text-xs">
+                    <td className="px-4 py-3 text-slate-500 text-xs">
                       {new Date(s.created_at).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
+                        day: "numeric", month: "long", year: "numeric",
                       })}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => openDetail(s)}
-                        className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors"
-                      >
-                        Lihat Detail
-                      </button>
+                      <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
+                        <button
+                          onClick={() => openDetail(s)}
+                          className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200"
+                        >
+                          Detail
+                        </button>
+                        <button
+                          onClick={() => openEdit(s)}
+                          className="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -235,36 +362,42 @@ export default function DashboardAdmin() {
         {/* Card list — mobile */}
         <div className="mt-3 space-y-2 md:hidden">
           {loading ? (
-            <div className="p-8 text-center text-sm text-slate-700">Memuat data...</div>
+            <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-700">
+            <div className="p-8 text-center text-sm text-slate-500">
               {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
             </div>
           ) : (
             filtered.map((s) => (
               <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
-                <p className="text-xs text-slate-700 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
-                <p className="text-xs text-slate-700 mt-0.5">
+                <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
                   {new Date(s.created_at).toLocaleDateString("id-ID", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
+                    day: "numeric", month: "long", year: "numeric",
                   })}
                 </p>
-                <button
-                  onClick={() => openDetail(s)}
-                  className="mt-3 w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors"
-                >
-                  Lihat Detail
-                </button>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => openDetail(s)}
+                    className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors"
+                  >
+                    Lihat Detail
+                  </button>
+                  <button
+                    onClick={() => openEdit(s)}
+                    className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Modal Detail */}
+      {/* ── Modal Detail ─────────────────────────────────────────────────── */}
       {showDetail && selectedSatker && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg w-full md:max-w-2xl max-h-[92vh] flex flex-col">
@@ -273,33 +406,41 @@ export default function DashboardAdmin() {
             <div className="px-5 py-4 border-b border-slate-100">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs text-slate-700">{selectedSatker.kode_satker}</p>
+                  <p className="text-xs text-slate-400">{selectedSatker.kode_satker}</p>
                   <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">
                     {selectedSatker.nama_satker}
                   </h2>
                 </div>
-                <button
-                  onClick={() => setShowDetail(false)}
-                  className="shrink-0 text-slate-300 hover:text-slate-700 text-xl leading-none transition-colors"
-                >
-                  &times;
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => { setShowDetail(false); openEdit(selectedSatker); }}
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setShowDetail(false)}
+                    className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors"
+                  >
+                    &times;
+                  </button>
+                </div>
               </div>
 
               {/* Tabs */}
               {selectedProfil && (
                 <div className="flex gap-1 mt-3">
-                  {(["kantor", "pejabat", "pic"] as const).map((tab) => (
+                  {TABS.map((tab) => (
                     <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                        activeTab === tab
+                        activeTab === tab.key
                           ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
-                      {tab === "kantor" ? "Profil Kantor" : tab === "pejabat" ? "Pejabat" : "PIC / Operator"}
+                      {tab.label}
                     </button>
                   ))}
                 </div>
@@ -309,14 +450,13 @@ export default function DashboardAdmin() {
             {/* Body */}
             <div className="overflow-y-auto px-5 py-4 flex-1">
               {profilLoading ? (
-                <div className="py-16 text-center text-sm text-slate-700">Memuat profil...</div>
+                <div className="py-16 text-center text-sm text-slate-500">Memuat profil...</div>
               ) : !selectedProfil ? (
-                <div className="py-16 text-center text-sm text-slate-700">
+                <div className="py-16 text-center text-sm text-slate-500">
                   Satker belum mengisi data profil.
                 </div>
               ) : (
                 <>
-                  {/* Tab: Profil Kantor */}
                   {activeTab === "kantor" && (
                     <div>
                       <InfoRow label="Alamat" value={selectedProfil.alamat} />
@@ -324,8 +464,6 @@ export default function DashboardAdmin() {
                       <InfoRow label="Email" value={selectedProfil.email} />
                     </div>
                   )}
-
-                  {/* Tab: Pejabat */}
                   {activeTab === "pejabat" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <PejabatCard jabatan="KPA" nama={selectedProfil.nama_kpa} nip={selectedProfil.nip_kpa} hp={selectedProfil.hp_kpa} />
@@ -339,8 +477,6 @@ export default function DashboardAdmin() {
                       <PejabatCard jabatan="Bendahara Pembantu" nama={selectedProfil.nama_bendahara_pembantu} nip={selectedProfil.nip_bendahara_pembantu} hp={selectedProfil.hp_bendahara_pembantu} />
                     </div>
                   )}
-
-                  {/* Tab: PIC */}
                   {activeTab === "pic" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <PejabatCard jabatan="PIC/Operator 1" nama={selectedProfil.nama_pic1} hp={selectedProfil.hp_pic1} />
@@ -357,10 +493,142 @@ export default function DashboardAdmin() {
             <div className="px-5 py-3 border-t border-slate-100">
               <button
                 onClick={() => setShowDetail(false)}
-                className="w-full py-2 text-sm text-slate-700 hover:text-slate-700 transition-colors"
+                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Edit ───────────────────────────────────────────────────── */}
+      {showEdit && editSatker && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg w-full md:max-w-2xl max-h-[92vh] flex flex-col">
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-100">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-slate-400">{editSatker.kode_satker}</p>
+                  <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">
+                    {editSatker.nama_satker}
+                  </h2>
+                  <p className="text-xs text-emerald-600 mt-0.5 font-medium">Mode Edit</p>
+                </div>
+                <button
+                  onClick={() => setShowEdit(false)}
+                  className="shrink-0 text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-1 mt-3">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setEditTab(tab.key)}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                      editTab === tab.key
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto px-5 py-4 flex-1">
+              {editLoading ? (
+                <div className="py-16 text-center text-sm text-slate-500">Memuat data...</div>
+              ) : (
+                <>
+                  {/* Tab: Profil Kantor */}
+                  {editTab === "kantor" && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Alamat Kantor</label>
+                        <textarea
+                          value={editForm.alamat}
+                          onChange={(e) => setEditForm({ ...editForm, alamat: e.target.value })}
+                          rows={3}
+                          placeholder="Isi alamat kantor..."
+                          className="w-full px-3 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white transition-all resize-none"
+                        />
+                      </div>
+                      <FormField label="No. Telepon Kantor" value={editForm.no_telp} onChange={(v) => setEditForm({ ...editForm, no_telp: v })} />
+                      <FormField label="Email Kantor" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
+                    </div>
+                  )}
+
+                  {/* Tab: Pejabat */}
+                  {editTab === "pejabat" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <PejabatFormGroup jabatan="KPA" prefix="kpa" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="PPK 1" prefix="ppk1" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="PPK 2" prefix="ppk2" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="PPK 3" prefix="ppk3" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="PPK 4" prefix="ppk4" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="PPSPM" prefix="ppspm" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="Bendahara Pengeluaran" prefix="bendahara_pengeluaran" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="Bendahara Penerimaan" prefix="bendahara_penerimaan" form={editForm} setForm={setEditForm} />
+                      <PejabatFormGroup jabatan="Bendahara Pembantu" prefix="bendahara_pembantu" form={editForm} setForm={setEditForm} />
+                    </div>
+                  )}
+
+                  {/* Tab: PIC */}
+                  {editTab === "pic" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {([1, 2, 3, 4] as const).map((n) => (
+                        <div key={n} className="p-3 rounded-lg border border-slate-100 bg-slate-50 space-y-2">
+                          <p className="text-xs font-semibold text-slate-600">PIC/Operator {n}</p>
+                          <FormField
+                            label="Nama"
+                            value={(editForm as any)[`nama_pic${n}`] || ""}
+                            onChange={(v) => setEditForm({ ...editForm, [`nama_pic${n}`]: v })}
+                          />
+                          <FormField
+                            label="HP"
+                            value={(editForm as any)[`hp_pic${n}`] || ""}
+                            onChange={(v) => setEditForm({ ...editForm, [`hp_pic${n}`]: v })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
+              {saveMsg && (
+                <p className={`text-xs flex-1 ${saveMsg.startsWith("✓") ? "text-emerald-600" : "text-red-500"}`}>
+                  {saveMsg}
+                </p>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={() => setShowEdit(false)}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || editLoading}
+                  className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {saving ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

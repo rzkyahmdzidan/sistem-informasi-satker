@@ -94,8 +94,8 @@ const inputCls =
 const Field = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-xs text-slate-700">{label}</p>
-    <p className="text-sm text-slate-700 font-semibold mt-0.5 break-words">
-      {value || <span className="text-slate-300 font-normal">Belum diisi</span>}
+    <p className="text-sm text-slate-800 font-semibold mt-0.5 break-words">
+      {value || <span className="text-slate-700 font-normal">Belum diisi</span>}
     </p>
   </div>
 );
@@ -148,7 +148,7 @@ const PejabatGroup = ({
 }) => (
   <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 py-4 border-b border-slate-100 last:border-0 last:pb-0 first:pt-0">
     <div className="sm:col-span-3">
-      <p className="text-xs font-semibold text-slate-500">
+      <p className="text-xs font-semibold text-slate-700">
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </p>
@@ -255,6 +255,7 @@ export default function DashboardSatker() {
     profil.nama_pic1 &&
     profil.nama_pic2;
 
+  // ── Komponen PejabatSummary (di dalam karena pakai closure, tapi tidak ada state) ──
   const PejabatSummary = ({
     label,
     nama,
@@ -270,14 +271,20 @@ export default function DashboardSatker() {
       <p className="text-xs text-slate-700">{label}</p>
       {nama ? (
         <div className="mt-0.5">
-          <p className="text-sm text-slate-700 font-semibold">{nama}</p>
-          <p className="text-xs text-slate-700 mt-0.5">
-            {nip}
-            {hp ? ` · ${hp}` : ""}
-          </p>
+          <p className="text-sm text-slate-800 font-semibold">{nama}</p>
+          {nip && (
+            <p className="text-xs text-slate-700 mt-0.5">
+              <span className="text-slate-700">NIP</span> {nip}
+            </p>
+          )}
+          {hp && (
+            <p className="text-xs text-slate-700 mt-0.5">
+              <span className="text-slate-700">No. HP</span> {hp}
+            </p>
+          )}
         </div>
       ) : (
-        <p className="text-sm text-slate-300 font-normal mt-0.5">Belum diisi</p>
+        <p className="text-sm text-slate-700 font-normal mt-0.5">Belum diisi</p>
       )}
     </div>
   );
@@ -309,7 +316,7 @@ export default function DashboardSatker() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg md:text-xl font-bold text-slate-800">Dashboard Satker</h1>
-            <p className="text-sm text-slate-500 mt-1">Kelola data profil satuan kerja Anda</p>
+            <p className="text-sm text-slate-700 mt-1">Kelola data profil satuan kerja Anda</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -458,7 +465,7 @@ export default function DashboardSatker() {
         <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
             <h3 className="text-sm font-semibold text-slate-800 mb-2">Hapus Semua Data Profil?</h3>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-slate-700 mb-6">
               Semua data profil kantor, pejabat, dan PIC akan dihapus. Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex gap-3">
