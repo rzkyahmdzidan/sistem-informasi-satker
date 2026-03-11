@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Search } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type Satker = {
   id: string;
@@ -10,6 +11,7 @@ type Satker = {
   kode_satker: string;
   status: string;
   created_at: string;
+  updated_at: string | null;
 };
 
 type ProfilSatker = {
@@ -54,20 +56,44 @@ type ProfilSatker = {
 };
 
 const emptyProfil: ProfilSatker = {
-  alamat: "", no_telp: "", email: "",
-  nama_kpa: "", nip_kpa: "", hp_kpa: "",
-  nama_ppk1: "", nip_ppk1: "", hp_ppk1: "",
-  nama_ppk2: "", nip_ppk2: "", hp_ppk2: "",
-  nama_ppk3: "", nip_ppk3: "", hp_ppk3: "",
-  nama_ppk4: "", nip_ppk4: "", hp_ppk4: "",
-  nama_ppspm: "", nip_ppspm: "", hp_ppspm: "",
-  nama_bendahara_pengeluaran: "", nip_bendahara_pengeluaran: "", hp_bendahara_pengeluaran: "",
-  nama_bendahara_penerimaan: "", nip_bendahara_penerimaan: "", hp_bendahara_penerimaan: "",
-  nama_bendahara_pembantu: "", nip_bendahara_pembantu: "", hp_bendahara_pembantu: "",
-  nama_pic1: "", hp_pic1: "",
-  nama_pic2: "", hp_pic2: "",
-  nama_pic3: "", hp_pic3: "",
-  nama_pic4: "", hp_pic4: "",
+  alamat: "",
+  no_telp: "",
+  email: "",
+  nama_kpa: "",
+  nip_kpa: "",
+  hp_kpa: "",
+  nama_ppk1: "",
+  nip_ppk1: "",
+  hp_ppk1: "",
+  nama_ppk2: "",
+  nip_ppk2: "",
+  hp_ppk2: "",
+  nama_ppk3: "",
+  nip_ppk3: "",
+  hp_ppk3: "",
+  nama_ppk4: "",
+  nip_ppk4: "",
+  hp_ppk4: "",
+  nama_ppspm: "",
+  nip_ppspm: "",
+  hp_ppspm: "",
+  nama_bendahara_pengeluaran: "",
+  nip_bendahara_pengeluaran: "",
+  hp_bendahara_pengeluaran: "",
+  nama_bendahara_penerimaan: "",
+  nip_bendahara_penerimaan: "",
+  hp_bendahara_penerimaan: "",
+  nama_bendahara_pembantu: "",
+  nip_bendahara_pembantu: "",
+  hp_bendahara_pembantu: "",
+  nama_pic1: "",
+  hp_pic1: "",
+  nama_pic2: "",
+  hp_pic2: "",
+  nama_pic3: "",
+  hp_pic3: "",
+  nama_pic4: "",
+  hp_pic4: "",
 };
 
 const NAV_ITEMS = [
@@ -80,17 +106,11 @@ const NAV_ITEMS = [
 const InfoRow = ({ label, value }: { label: string; value?: string }) => (
   <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
     <p className="text-xs text-slate-500 shrink-0 w-32">{label}</p>
-    <p className="text-xs text-slate-800 text-right break-words">
-      {value || <span className="text-slate-300 italic">Belum diisi</span>}
-    </p>
+    <p className="text-xs text-slate-800 text-right break-words">{value || <span className="text-slate-300 italic">Belum diisi</span>}</p>
   </div>
 );
 
-const PejabatCard = ({
-  jabatan, nama, nip, hp,
-}: {
-  jabatan: string; nama?: string; nip?: string; hp?: string;
-}) => (
+const PejabatCard = ({ jabatan, nama, nip, hp }: { jabatan: string; nama?: string; nip?: string; hp?: string }) => (
   <div className="p-3 rounded-lg border border-slate-100 bg-slate-50">
     <p className="text-xs font-semibold text-slate-500 mb-2">{jabatan}</p>
     {nama ? (
@@ -115,12 +135,7 @@ const PejabatCard = ({
   </div>
 );
 
-// Input field untuk form edit
-const FormField = ({
-  label, value, onChange, placeholder,
-}: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
-}) => (
+const FormField = ({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) => (
   <div>
     <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
     <input
@@ -133,35 +148,12 @@ const FormField = ({
   </div>
 );
 
-// Group 3 field pejabat (nama, nip, hp)
-const PejabatFormGroup = ({
-  jabatan, prefix, form, setForm, withNip = true,
-}: {
-  jabatan: string;
-  prefix: string;
-  form: ProfilSatker;
-  setForm: (f: ProfilSatker) => void;
-  withNip?: boolean;
-}) => (
+const PejabatFormGroup = ({ jabatan, prefix, form, setForm, withNip = true }: { jabatan: string; prefix: string; form: ProfilSatker; setForm: (f: ProfilSatker) => void; withNip?: boolean }) => (
   <div className="p-3 rounded-lg border border-slate-100 bg-slate-50 space-y-2">
     <p className="text-xs font-semibold text-slate-600">{jabatan}</p>
-    <FormField
-      label="Nama"
-      value={(form as any)[`nama_${prefix}`] || ""}
-      onChange={(v) => setForm({ ...form, [`nama_${prefix}`]: v })}
-    />
-    {withNip && (
-      <FormField
-        label="NIP"
-        value={(form as any)[`nip_${prefix}`] || ""}
-        onChange={(v) => setForm({ ...form, [`nip_${prefix}`]: v })}
-      />
-    )}
-    <FormField
-      label="HP"
-      value={(form as any)[`hp_${prefix}`] || ""}
-      onChange={(v) => setForm({ ...form, [`hp_${prefix}`]: v })}
-    />
+    <FormField label="Nama" value={(form as any)[`nama_${prefix}`] || ""} onChange={(v) => setForm({ ...form, [`nama_${prefix}`]: v })} />
+    {withNip && <FormField label="NIP" value={(form as any)[`nip_${prefix}`] || ""} onChange={(v) => setForm({ ...form, [`nip_${prefix}`]: v })} />}
+    <FormField label="HP" value={(form as any)[`hp_${prefix}`] || ""} onChange={(v) => setForm({ ...form, [`hp_${prefix}`]: v })} />
   </div>
 );
 
@@ -171,6 +163,7 @@ export default function DashboardAdmin() {
   const [satkerList, setSatkerList] = useState<Satker[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   // Detail modal
   const [showDetail, setShowDetail] = useState(false);
@@ -241,14 +234,10 @@ export default function DashboardAdmin() {
     const res = await fetch("/api/satker", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: editSatker.id,
-        profil: editForm,
-      }),
+      body: JSON.stringify({ id: editSatker.id, profil: editForm }),
     });
     if (res.ok) {
       setSaveMsg("✓ Data berhasil disimpan");
-      // Kalau modal detail sedang buka untuk satker yang sama, refresh profilnya
       if (selectedSatker?.id === editSatker.id) {
         setSelectedProfil({ ...editForm });
       }
@@ -262,11 +251,67 @@ export default function DashboardAdmin() {
     setSaving(false);
   };
 
-  const filtered = satkerList.filter(
-    (s) =>
-      s.nama_satker?.toLowerCase().includes(search.toLowerCase()) ||
-      s.kode_satker?.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleExport = async () => {
+    setExporting(true);
+    const rows = await Promise.all(
+      satkerList.map(async (s) => {
+        const res = await fetch(`/api/satker/profil?id=${s.id}`);
+        const data = res.ok ? await res.json() : {};
+        const p: ProfilSatker = { ...emptyProfil, ...(data.profil || {}) };
+        return {
+          "Nama Satker": s.nama_satker,
+          "Kode Satker": s.kode_satker,
+          "Tanggal Daftar": new Date(s.created_at).toLocaleDateString("id-ID"),
+          Alamat: p.alamat,
+          "No. Telp": p.no_telp,
+          Email: p.email,
+          "Nama KPA": p.nama_kpa,
+          "NIP KPA": p.nip_kpa,
+          "HP KPA": p.hp_kpa,
+          "Nama PPK 1": p.nama_ppk1,
+          "NIP PPK 1": p.nip_ppk1,
+          "HP PPK 1": p.hp_ppk1,
+          "Nama PPK 2": p.nama_ppk2,
+          "NIP PPK 2": p.nip_ppk2,
+          "HP PPK 2": p.hp_ppk2,
+          "Nama PPK 3": p.nama_ppk3,
+          "NIP PPK 3": p.nip_ppk3,
+          "HP PPK 3": p.hp_ppk3,
+          "Nama PPK 4": p.nama_ppk4,
+          "NIP PPK 4": p.nip_ppk4,
+          "HP PPK 4": p.hp_ppk4,
+          "Nama PPSPM": p.nama_ppspm,
+          "NIP PPSPM": p.nip_ppspm,
+          "HP PPSPM": p.hp_ppspm,
+          "Nama Bendahara Pengeluaran": p.nama_bendahara_pengeluaran,
+          "NIP Bendahara Pengeluaran": p.nip_bendahara_pengeluaran,
+          "HP Bendahara Pengeluaran": p.hp_bendahara_pengeluaran,
+          "Nama Bendahara Penerimaan": p.nama_bendahara_penerimaan,
+          "NIP Bendahara Penerimaan": p.nip_bendahara_penerimaan,
+          "HP Bendahara Penerimaan": p.hp_bendahara_penerimaan,
+          "Nama Bendahara Pembantu": p.nama_bendahara_pembantu,
+          "NIP Bendahara Pembantu": p.nip_bendahara_pembantu,
+          "HP Bendahara Pembantu": p.hp_bendahara_pembantu,
+          "Nama PIC 1": p.nama_pic1,
+          "HP PIC 1": p.hp_pic1,
+          "Nama PIC 2": p.nama_pic2,
+          "HP PIC 2": p.hp_pic2,
+          "Nama PIC 3": p.nama_pic3,
+          "HP PIC 3": p.hp_pic3,
+          "Nama PIC 4": p.nama_pic4,
+          "HP PIC 4": p.hp_pic4,
+        };
+      }),
+    );
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Satker");
+    XLSX.writeFile(wb, `Data_Satker_KPPN_Medan_I_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    setExporting(false);
+  };
+
+  const filtered = satkerList.filter((s) => s.nama_satker?.toLowerCase().includes(search.toLowerCase()) || s.kode_satker?.toLowerCase().includes(search.toLowerCase()));
 
   const TABS = [
     { key: "kantor", label: "Profil Kantor" },
@@ -276,14 +321,7 @@ export default function DashboardAdmin() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header
-        nama="Sistem Informasi Satuan Kerja"
-        sub="KPPN Medan I"
-        userLabel="Administrator"
-        userRole="KPPN"
-        onLogout={handleLogout}
-        navItems={NAV_ITEMS}
-      />
+      <Header nama="Sistem Informasi Satuan Kerja" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
 
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <h1 className="text-lg md:text-xl font-bold text-slate-800">Data Satker</h1>
@@ -306,6 +344,9 @@ export default function DashboardAdmin() {
             </button>
           )}
           <p className="text-xs text-slate-500 shrink-0">{filtered.length} ditemukan</p>
+          <button onClick={handleExport} disabled={exporting || loading} className="shrink-0 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs rounded-lg transition-colors disabled:opacity-50">
+            {exporting ? "Mengekspor..." : "↓ Export Excel"}
+          </button>
         </div>
 
         {/* Table — desktop */}
@@ -313,16 +354,14 @@ export default function DashboardAdmin() {
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">
-              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
-            </div>
+            <div className="p-8 text-center text-sm text-slate-500">{search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Nama Satker</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Kode Satker</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Tanggal Daftar</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Update Terakhir</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">Aksi</th>
                 </tr>
               </thead>
@@ -332,22 +371,24 @@ export default function DashboardAdmin() {
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-600">{s.kode_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-500 text-xs">
-                      {new Date(s.created_at).toLocaleDateString("id-ID", {
-                        day: "numeric", month: "long", year: "numeric",
-                      })}
+                      {s.updated_at ? (
+                        new Date(s.updated_at).toLocaleString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      ) : (
+                        <span className="text-slate-300 italic">Belum diisi</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
-                        <button
-                          onClick={() => openDetail(s)}
-                          className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200"
-                        >
+                        <button onClick={() => openDetail(s)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
                           Detail
                         </button>
-                        <button
-                          onClick={() => openEdit(s)}
-                          className="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
-                        >
+                        <button onClick={() => openEdit(s)} className="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">
                           Edit
                         </button>
                       </div>
@@ -364,9 +405,7 @@ export default function DashboardAdmin() {
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">
-              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}
-            </div>
+            <div className="p-8 text-center text-sm text-slate-500">{search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker aktif"}</div>
           ) : (
             filtered.map((s) => (
               <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
@@ -374,20 +413,16 @@ export default function DashboardAdmin() {
                 <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {new Date(s.created_at).toLocaleDateString("id-ID", {
-                    day: "numeric", month: "long", year: "numeric",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })}
                 </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => openDetail(s)}
-                    className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded-lg border border-blue-200 transition-colors"
-                  >
-                    Lihat Detail
+                <div className="mt-3 inline-flex w-full rounded-lg border border-slate-200 overflow-hidden">
+                  <button onClick={() => openDetail(s)} className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
+                    Detail
                   </button>
-                  <button
-                    onClick={() => openEdit(s)}
-                    className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors"
-                  >
+                  <button onClick={() => openEdit(s)} className="flex-1 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">
                     Edit
                   </button>
                 </div>
@@ -401,44 +436,34 @@ export default function DashboardAdmin() {
       {showDetail && selectedSatker && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg w-full md:max-w-2xl max-h-[92vh] flex flex-col">
-
-            {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-slate-400">{selectedSatker.kode_satker}</p>
-                  <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">
-                    {selectedSatker.nama_satker}
-                  </h2>
+                  <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">{selectedSatker.nama_satker}</h2>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => { setShowDetail(false); openEdit(selectedSatker); }}
+                    onClick={() => {
+                      setShowDetail(false);
+                      openEdit(selectedSatker);
+                    }}
                     className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors"
                   >
                     Edit
                   </button>
-                  <button
-                    onClick={() => setShowDetail(false)}
-                    className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors"
-                  >
+                  <button onClick={() => setShowDetail(false)} className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">
                     &times;
                   </button>
                 </div>
               </div>
-
-              {/* Tabs */}
               {selectedProfil && (
                 <div className="flex gap-1 mt-3">
                   {TABS.map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                        activeTab === tab.key
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeTab === tab.key ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
                     >
                       {tab.label}
                     </button>
@@ -447,14 +472,11 @@ export default function DashboardAdmin() {
               )}
             </div>
 
-            {/* Body */}
             <div className="overflow-y-auto px-5 py-4 flex-1">
               {profilLoading ? (
                 <div className="py-16 text-center text-sm text-slate-500">Memuat profil...</div>
               ) : !selectedProfil ? (
-                <div className="py-16 text-center text-sm text-slate-500">
-                  Satker belum mengisi data profil.
-                </div>
+                <div className="py-16 text-center text-sm text-slate-500">Satker belum mengisi data profil.</div>
               ) : (
                 <>
                   {activeTab === "kantor" && (
@@ -489,12 +511,8 @@ export default function DashboardAdmin() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-5 py-3 border-t border-slate-100">
-              <button
-                onClick={() => setShowDetail(false)}
-                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-              >
+              <button onClick={() => setShowDetail(false)} className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
                 Tutup
               </button>
             </div>
@@ -506,36 +524,23 @@ export default function DashboardAdmin() {
       {showEdit && editSatker && (
         <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg w-full md:max-w-2xl max-h-[92vh] flex flex-col">
-
-            {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-slate-400">{editSatker.kode_satker}</p>
-                  <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">
-                    {editSatker.nama_satker}
-                  </h2>
+                  <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">{editSatker.nama_satker}</h2>
                   <p className="text-xs text-emerald-600 mt-0.5 font-medium">Mode Edit</p>
                 </div>
-                <button
-                  onClick={() => setShowEdit(false)}
-                  className="shrink-0 text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors"
-                >
+                <button onClick={() => setShowEdit(false)} className="shrink-0 text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">
                   &times;
                 </button>
               </div>
-
-              {/* Tabs */}
               <div className="flex gap-1 mt-3">
                 {TABS.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setEditTab(tab.key)}
-                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      editTab === tab.key
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${editTab === tab.key ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
                   >
                     {tab.label}
                   </button>
@@ -543,13 +548,11 @@ export default function DashboardAdmin() {
               </div>
             </div>
 
-            {/* Body */}
             <div className="overflow-y-auto px-5 py-4 flex-1">
               {editLoading ? (
                 <div className="py-16 text-center text-sm text-slate-500">Memuat data...</div>
               ) : (
                 <>
-                  {/* Tab: Profil Kantor */}
                   {editTab === "kantor" && (
                     <div className="space-y-3">
                       <div>
@@ -566,8 +569,6 @@ export default function DashboardAdmin() {
                       <FormField label="Email Kantor" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
                     </div>
                   )}
-
-                  {/* Tab: Pejabat */}
                   {editTab === "pejabat" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <PejabatFormGroup jabatan="KPA" prefix="kpa" form={editForm} setForm={setEditForm} />
@@ -581,23 +582,13 @@ export default function DashboardAdmin() {
                       <PejabatFormGroup jabatan="Bendahara Pembantu" prefix="bendahara_pembantu" form={editForm} setForm={setEditForm} />
                     </div>
                   )}
-
-                  {/* Tab: PIC */}
                   {editTab === "pic" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {([1, 2, 3, 4] as const).map((n) => (
                         <div key={n} className="p-3 rounded-lg border border-slate-100 bg-slate-50 space-y-2">
                           <p className="text-xs font-semibold text-slate-600">PIC/Operator {n}</p>
-                          <FormField
-                            label="Nama"
-                            value={(editForm as any)[`nama_pic${n}`] || ""}
-                            onChange={(v) => setEditForm({ ...editForm, [`nama_pic${n}`]: v })}
-                          />
-                          <FormField
-                            label="HP"
-                            value={(editForm as any)[`hp_pic${n}`] || ""}
-                            onChange={(v) => setEditForm({ ...editForm, [`hp_pic${n}`]: v })}
-                          />
+                          <FormField label="Nama" value={(editForm as any)[`nama_pic${n}`] || ""} onChange={(v) => setEditForm({ ...editForm, [`nama_pic${n}`]: v })} />
+                          <FormField label="HP" value={(editForm as any)[`hp_pic${n}`] || ""} onChange={(v) => setEditForm({ ...editForm, [`hp_pic${n}`]: v })} />
                         </div>
                       ))}
                     </div>
@@ -606,26 +597,13 @@ export default function DashboardAdmin() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
-              {saveMsg && (
-                <p className={`text-xs flex-1 ${saveMsg.startsWith("✓") ? "text-emerald-600" : "text-red-500"}`}>
-                  {saveMsg}
-                </p>
-              )}
+              {saveMsg && <p className={`text-xs flex-1 ${saveMsg.startsWith("✓") ? "text-emerald-600" : "text-red-500"}`}>{saveMsg}</p>}
               <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={() => setShowEdit(false)}
-                  disabled={saving}
-                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg transition-colors disabled:opacity-50"
-                >
+                <button onClick={() => setShowEdit(false)} disabled={saving} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg transition-colors disabled:opacity-50">
                   Batal
                 </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving || editLoading}
-                  className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
+                <button onClick={handleSave} disabled={saving || editLoading} className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50">
                   {saving ? "Menyimpan..." : "Simpan"}
                 </button>
               </div>
