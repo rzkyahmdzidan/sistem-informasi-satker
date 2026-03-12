@@ -80,7 +80,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
           <img src="/images/logo-kemenkeu.png" alt="Logo Kemenkeu" className="h-20 w-auto object-contain mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-slate-800">Sistem Informasi Satuan Kerja</h1>
+          <h1 className="text-xl font-bold text-slate-800">Sarana Penyelesaian Dokumen Organisasi</h1>
           <p className="text-sm text-blue-600 font-medium mt-1">KPPN Medan I</p>
         </div>
 

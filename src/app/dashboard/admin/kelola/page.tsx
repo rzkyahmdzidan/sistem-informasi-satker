@@ -282,7 +282,7 @@ export default function KelolaUser() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header nama="Sistem Informasi Satuan Kerja" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
+      <Header nama="Sarana Penyelesaian Dokumen Organisasi" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
 
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <div className="flex items-start justify-between gap-3">

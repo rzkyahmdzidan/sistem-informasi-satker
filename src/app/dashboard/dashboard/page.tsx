@@ -299,7 +299,7 @@ export default function DashboardSatker() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
-        nama="Sistem Informasi Satuan Kerja"
+        nama="Sarana Penyelesaian Dokumen Organisasi"
         sub={satker?.nama_satker || sessionUser?.username || "Satker"}
         onLogout={handleLogout}
         extraButton={

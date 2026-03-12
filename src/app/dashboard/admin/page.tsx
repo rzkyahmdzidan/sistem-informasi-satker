@@ -321,7 +321,7 @@ export default function DashboardAdmin() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header nama="Sistem Informasi Satuan Kerja" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
+      <Header nama="Sarana Penyelesaian Dokumen Organisasi" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
 
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <h1 className="text-lg md:text-xl font-bold text-slate-800">Data Satker</h1>
