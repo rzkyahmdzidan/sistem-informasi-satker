@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/header";
 import { Search } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -55,53 +55,79 @@ type ProfilSatker = {
   hp_pic4: string;
 };
 
-const emptyProfil: ProfilSatker = {
-  alamat: "",
-  no_telp: "",
-  email: "",
-  nama_kpa: "",
-  nip_kpa: "",
-  hp_kpa: "",
-  nama_ppk1: "",
-  nip_ppk1: "",
-  hp_ppk1: "",
-  nama_ppk2: "",
-  nip_ppk2: "",
-  hp_ppk2: "",
-  nama_ppk3: "",
-  nip_ppk3: "",
-  hp_ppk3: "",
-  nama_ppk4: "",
-  nip_ppk4: "",
-  hp_ppk4: "",
-  nama_ppspm: "",
-  nip_ppspm: "",
-  hp_ppspm: "",
-  nama_bendahara_pengeluaran: "",
-  nip_bendahara_pengeluaran: "",
-  hp_bendahara_pengeluaran: "",
-  nama_bendahara_penerimaan: "",
-  nip_bendahara_penerimaan: "",
-  hp_bendahara_penerimaan: "",
-  nama_bendahara_pembantu: "",
-  nip_bendahara_pembantu: "",
-  hp_bendahara_pembantu: "",
-  nama_pic1: "",
-  hp_pic1: "",
-  nama_pic2: "",
-  hp_pic2: "",
-  nama_pic3: "",
-  hp_pic3: "",
-  nama_pic4: "",
-  hp_pic4: "",
+type ImportProfilRow = {
+  id: string;
+  kode_satker: string;
+  nama_satker: string;
+  profil: Partial<ProfilSatker>;
+  status: "pending" | "success" | "error" | "skip";
+  error?: string;
 };
+
+const emptyProfil: ProfilSatker = {
+  alamat: "", no_telp: "", email: "",
+  nama_kpa: "", nip_kpa: "", hp_kpa: "",
+  nama_ppk1: "", nip_ppk1: "", hp_ppk1: "",
+  nama_ppk2: "", nip_ppk2: "", hp_ppk2: "",
+  nama_ppk3: "", nip_ppk3: "", hp_ppk3: "",
+  nama_ppk4: "", nip_ppk4: "", hp_ppk4: "",
+  nama_ppspm: "", nip_ppspm: "", hp_ppspm: "",
+  nama_bendahara_pengeluaran: "", nip_bendahara_pengeluaran: "", hp_bendahara_pengeluaran: "",
+  nama_bendahara_penerimaan: "", nip_bendahara_penerimaan: "", hp_bendahara_penerimaan: "",
+  nama_bendahara_pembantu: "", nip_bendahara_pembantu: "", hp_bendahara_pembantu: "",
+  nama_pic1: "", hp_pic1: "",
+  nama_pic2: "", hp_pic2: "",
+  nama_pic3: "", hp_pic3: "",
+  nama_pic4: "", hp_pic4: "",
+};
+
+// Mapping header Excel → field profil (mendukung kedua format file)
+const HEADER_MAP: Record<string, keyof ProfilSatker> = {
+  // Format profil.xlsx (data kantor)
+  "ALAMAT LENGKAP KANTOR": "alamat",
+  "NOMOR TELP KANTOR ": "no_telp",
+  "NOMOR TELP KANTOR": "no_telp",
+  "EMAIL KANTOR (RESMI MENGGUNAKAN .GO.ID)": "email",
+  "EMAIL KANTOR": "email",
+  // Format tes.xlsx (data pejabat)
+  "NAMA KPA": "nama_kpa",
+  "NIP/NRP": "nip_kpa",
+  "NAMA PPK1": "nama_ppk1",
+  "NIP PPK 1": "nip_ppk1",
+  "NAMA PPK2": "nama_ppk2",
+  "NIP2": "nip_ppk2",
+  "NAMA PPK3": "nama_ppk3",
+  "NIP3": "nip_ppk3",
+  "NAMA PPK4": "nama_ppk4",
+  "NIP4": "nip_ppk4",
+  "NAMA PPSPM": "nama_ppspm",
+  "NIP/NRP5": "nip_ppspm",
+  "NAMA BENDAHARA PENGELUARAN": "nama_bendahara_pengeluaran",
+  "NIP/NRP6": "nip_bendahara_pengeluaran",
+  "NAMA BENDAHARA PENERIMAAN": "nama_bendahara_penerimaan",
+  "NIP/NRP7": "nip_bendahara_penerimaan",
+  "NAMA BENDAHARA PENGELUARAN PEMBANTU": "nama_bendahara_pembantu",
+  "NIP/NRP8": "nip_bendahara_pembantu",
+  "NAMA PIC/OPERATOR 1": "nama_pic1",
+  "NOMOR HP": "hp_pic1",
+  "NAMA PIC/OPERATOR 2": "nama_pic2",
+  "NOMOR HP9": "hp_pic2",
+  "NAMA PIC/OPERATOR 3": "nama_pic3",
+  "NOMOR HP10": "hp_pic3",
+  "NAMA PIC/OPERATOR 4": "nama_pic4",
+  "NOMOR HP11": "hp_pic4",
+};
+
+// Nama kolom kode & nama satker di file Excel ini
+const COL_KODE = "KODE S";
+const COL_NAMA = "KER - NAMA SATKER (SUDAH DIURUTKAN BERDASARKAN KODE SATKER)";
 
 const NAV_ITEMS = [
   { label: "Data Satker", href: "/dashboard/admin" },
   { label: "Kelola User", href: "/dashboard/admin/kelola" },
 ];
 
-// ─── Komponen di luar ───────────────────────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
 const InfoRow = ({ label, value }: { label: string; value?: string }) => (
   <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
@@ -116,18 +142,8 @@ const PejabatCard = ({ jabatan, nama, nip, hp }: { jabatan: string; nama?: strin
     {nama ? (
       <div className="space-y-1">
         <p className="text-sm font-medium text-slate-800">{nama}</p>
-        {nip && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-400">NIP</span>
-            <span className="text-xs text-slate-700">{nip}</span>
-          </div>
-        )}
-        {hp && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-400">HP</span>
-            <span className="text-xs text-slate-700">{hp}</span>
-          </div>
-        )}
+        {nip && <div className="flex items-center gap-1.5"><span className="text-xs text-slate-400">NIP</span><span className="text-xs text-slate-700">{nip}</span></div>}
+        {hp && <div className="flex items-center gap-1.5"><span className="text-xs text-slate-400">HP</span><span className="text-xs text-slate-700">{hp}</span></div>}
       </div>
     ) : (
       <p className="text-xs text-slate-300 italic">Belum diisi</p>
@@ -139,9 +155,7 @@ const FormField = ({ label, value, onChange, placeholder }: { label: string; val
   <div>
     <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
     <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+      type="text" value={value} onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder || `Isi ${label.toLowerCase()}...`}
       className="w-full px-3 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white transition-all"
     />
@@ -181,6 +195,14 @@ export default function DashboardAdmin() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
 
+  // Import modal
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<ImportProfilRow[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importDone, setImportDone] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const fetchSatker = async () => {
     setLoading(true);
     const res = await fetch("/api/satker/list");
@@ -189,9 +211,7 @@ export default function DashboardAdmin() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchSatker();
-  }, []);
+  useEffect(() => { fetchSatker(); }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "DELETE" });
@@ -205,10 +225,7 @@ export default function DashboardAdmin() {
     setActiveTab("kantor");
     setProfilLoading(true);
     const res = await fetch(`/api/satker/profil?id=${satker.id}`);
-    if (res.ok) {
-      const data = await res.json();
-      setSelectedProfil(data.profil);
-    }
+    if (res.ok) { const data = await res.json(); setSelectedProfil(data.profil); }
     setProfilLoading(false);
   };
 
@@ -220,10 +237,7 @@ export default function DashboardAdmin() {
     setSaveMsg("");
     setEditLoading(true);
     const res = await fetch(`/api/satker/profil?id=${satker.id}`);
-    if (res.ok) {
-      const data = await res.json();
-      setEditForm({ ...emptyProfil, ...(data.profil || {}) });
-    }
+    if (res.ok) { const data = await res.json(); setEditForm({ ...emptyProfil, ...(data.profil || {}) }); }
     setEditLoading(false);
   };
 
@@ -238,13 +252,8 @@ export default function DashboardAdmin() {
     });
     if (res.ok) {
       setSaveMsg("✓ Data berhasil disimpan");
-      if (selectedSatker?.id === editSatker.id) {
-        setSelectedProfil({ ...editForm });
-      }
-      setTimeout(() => {
-        setSaveMsg("");
-        setShowEdit(false);
-      }, 1500);
+      if (selectedSatker?.id === editSatker.id) setSelectedProfil({ ...editForm });
+      setTimeout(() => { setSaveMsg(""); setShowEdit(false); }, 1500);
     } else {
       setSaveMsg("✗ Gagal menyimpan. Coba lagi.");
     }
@@ -259,51 +268,25 @@ export default function DashboardAdmin() {
         const data = res.ok ? await res.json() : {};
         const p: ProfilSatker = { ...emptyProfil, ...(data.profil || {}) };
         return {
-          "Nama Satker": s.nama_satker,
-          "Kode Satker": s.kode_satker,
+          "Nama Satker": s.nama_satker, "Kode Satker": s.kode_satker,
           "Tanggal Daftar": new Date(s.created_at).toLocaleDateString("id-ID"),
-          Alamat: p.alamat,
-          "No. Telp": p.no_telp,
-          Email: p.email,
-          "Nama KPA": p.nama_kpa,
-          "NIP KPA": p.nip_kpa,
-          "HP KPA": p.hp_kpa,
-          "Nama PPK 1": p.nama_ppk1,
-          "NIP PPK 1": p.nip_ppk1,
-          "HP PPK 1": p.hp_ppk1,
-          "Nama PPK 2": p.nama_ppk2,
-          "NIP PPK 2": p.nip_ppk2,
-          "HP PPK 2": p.hp_ppk2,
-          "Nama PPK 3": p.nama_ppk3,
-          "NIP PPK 3": p.nip_ppk3,
-          "HP PPK 3": p.hp_ppk3,
-          "Nama PPK 4": p.nama_ppk4,
-          "NIP PPK 4": p.nip_ppk4,
-          "HP PPK 4": p.hp_ppk4,
-          "Nama PPSPM": p.nama_ppspm,
-          "NIP PPSPM": p.nip_ppspm,
-          "HP PPSPM": p.hp_ppspm,
-          "Nama Bendahara Pengeluaran": p.nama_bendahara_pengeluaran,
-          "NIP Bendahara Pengeluaran": p.nip_bendahara_pengeluaran,
-          "HP Bendahara Pengeluaran": p.hp_bendahara_pengeluaran,
-          "Nama Bendahara Penerimaan": p.nama_bendahara_penerimaan,
-          "NIP Bendahara Penerimaan": p.nip_bendahara_penerimaan,
-          "HP Bendahara Penerimaan": p.hp_bendahara_penerimaan,
-          "Nama Bendahara Pembantu": p.nama_bendahara_pembantu,
-          "NIP Bendahara Pembantu": p.nip_bendahara_pembantu,
-          "HP Bendahara Pembantu": p.hp_bendahara_pembantu,
-          "Nama PIC 1": p.nama_pic1,
-          "HP PIC 1": p.hp_pic1,
-          "Nama PIC 2": p.nama_pic2,
-          "HP PIC 2": p.hp_pic2,
-          "Nama PIC 3": p.nama_pic3,
-          "HP PIC 3": p.hp_pic3,
-          "Nama PIC 4": p.nama_pic4,
-          "HP PIC 4": p.hp_pic4,
+          Alamat: p.alamat, "No. Telp": p.no_telp, Email: p.email,
+          "Nama KPA": p.nama_kpa, "NIP KPA": p.nip_kpa, "HP KPA": p.hp_kpa,
+          "Nama PPK 1": p.nama_ppk1, "NIP PPK 1": p.nip_ppk1, "HP PPK 1": p.hp_ppk1,
+          "Nama PPK 2": p.nama_ppk2, "NIP PPK 2": p.nip_ppk2, "HP PPK 2": p.hp_ppk2,
+          "Nama PPK 3": p.nama_ppk3, "NIP PPK 3": p.nip_ppk3, "HP PPK 3": p.hp_ppk3,
+          "Nama PPK 4": p.nama_ppk4, "NIP PPK 4": p.nip_ppk4, "HP PPK 4": p.hp_ppk4,
+          "Nama PPSPM": p.nama_ppspm, "NIP PPSPM": p.nip_ppspm, "HP PPSPM": p.hp_ppspm,
+          "Nama Bendahara Pengeluaran": p.nama_bendahara_pengeluaran, "NIP Bendahara Pengeluaran": p.nip_bendahara_pengeluaran, "HP Bendahara Pengeluaran": p.hp_bendahara_pengeluaran,
+          "Nama Bendahara Penerimaan": p.nama_bendahara_penerimaan, "NIP Bendahara Penerimaan": p.nip_bendahara_penerimaan, "HP Bendahara Penerimaan": p.hp_bendahara_penerimaan,
+          "Nama Bendahara Pembantu": p.nama_bendahara_pembantu, "NIP Bendahara Pembantu": p.nip_bendahara_pembantu, "HP Bendahara Pembantu": p.hp_bendahara_pembantu,
+          "Nama PIC 1": p.nama_pic1, "HP PIC 1": p.hp_pic1,
+          "Nama PIC 2": p.nama_pic2, "HP PIC 2": p.hp_pic2,
+          "Nama PIC 3": p.nama_pic3, "HP PIC 3": p.hp_pic3,
+          "Nama PIC 4": p.nama_pic4, "HP PIC 4": p.hp_pic4,
         };
       }),
     );
-
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data Satker");
@@ -311,7 +294,107 @@ export default function DashboardAdmin() {
     setExporting(false);
   };
 
-  const filtered = satkerList.filter((s) => s.nama_satker?.toLowerCase().includes(search.toLowerCase()) || s.kode_satker?.toLowerCase().includes(search.toLowerCase()));
+  // ── Import Excel ──────────────────────────────────────────────────────────
+
+  const openImport = () => {
+    setImportRows([]);
+    setImportProgress(0);
+    setImportDone(false);
+    setShowImport(true);
+  };
+
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = evt.target?.result;
+      const wb = XLSX.read(data, { type: "binary" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      const satkerByKode = new Map(satkerList.map((s) => [String(s.kode_satker).trim(), s]));
+
+      // Handle NIP yang tersimpan sebagai scientific notation di Excel
+      const toStr = (val: any): string => {
+        if (!val && val !== 0) return "";
+        const s = String(val).trim();
+        if (!s || s === "-") return "";
+        if (s.includes("e") || s.includes("E")) {
+          const num = Number(s);
+          if (!isFinite(num) || isNaN(num)) return s;
+          return Math.round(num).toString();
+        }
+        return s;
+      };
+
+      const parsed: ImportProfilRow[] = rawRows.map((row) => {
+        const kode = toStr(row[COL_KODE]);
+        const nama = toStr(row[COL_NAMA]);
+
+        if (!kode) return { id: "", kode_satker: kode, nama_satker: nama, profil: {}, status: "skip" as const, error: "Kode kosong" };
+
+        const satker = satkerByKode.get(kode);
+        if (!satker) return { id: "", kode_satker: kode, nama_satker: nama, profil: {}, status: "skip" as const, error: "Kode tidak terdaftar" };
+
+        const profil: Partial<ProfilSatker> = {};
+        for (const [header, field] of Object.entries(HEADER_MAP)) {
+          const val = toStr(row[header]);
+          if (val) (profil as any)[field] = val;
+        }
+
+        return { id: satker.id, kode_satker: kode, nama_satker: satker.nama_satker, profil, status: "pending" as const };
+      });
+
+      setImportRows(parsed);
+      setImportProgress(0);
+      setImportDone(false);
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = "";
+  };
+
+  const handleImport = async () => {
+    const toProcess = importRows.filter((r) => r.status === "pending");
+    if (toProcess.length === 0) return;
+    setImportLoading(true);
+    let done = 0;
+    const updated = [...importRows];
+
+    for (let i = 0; i < updated.length; i++) {
+      if (updated[i].status !== "pending") continue;
+      const res = await fetch("/api/satker", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: updated[i].id, profil: updated[i].profil }),
+      });
+      if (res.ok) {
+        updated[i] = { ...updated[i], status: "success" };
+      } else {
+        const data = await res.json();
+        updated[i] = { ...updated[i], status: "error", error: data.error || "Gagal" };
+      }
+      done++;
+      setImportProgress(Math.round((done / toProcess.length) * 100));
+      setImportRows([...updated]);
+    }
+
+    setImportDone(true);
+    setImportLoading(false);
+    fetchSatker();
+  };
+
+  const pendingCount = importRows.filter((r) => r.status === "pending").length;
+  const successCount = importRows.filter((r) => r.status === "success").length;
+  const skipCount = importRows.filter((r) => r.status === "skip").length;
+  const errorCount = importRows.filter((r) => r.status === "error").length;
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const filtered = satkerList.filter(
+    (s) => s.nama_satker?.toLowerCase().includes(search.toLowerCase()) || s.kode_satker?.toLowerCase().includes(search.toLowerCase())
+  );
 
   const TABS = [
     { key: "kantor", label: "Profil Kantor" },
@@ -332,19 +415,28 @@ export default function DashboardAdmin() {
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari nama atau kode satker..."
               className="w-full pl-9 pr-4 py-2 text-sm text-slate-900 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all bg-white"
             />
           </div>
-          {search && (
-            <button onClick={() => setSearch("")} className="text-xs text-slate-500 hover:text-slate-700 shrink-0">
-              Reset
-            </button>
-          )}
+          {search && <button onClick={() => setSearch("")} className="text-xs text-slate-500 hover:text-slate-700 shrink-0">Reset</button>}
           <p className="text-xs text-slate-500 shrink-0">{filtered.length} ditemukan</p>
-          <button onClick={handleExport} disabled={exporting || loading} className="shrink-0 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs rounded-lg transition-colors disabled:opacity-50">
+
+          {/* Import & Export buttons */}
+          <button
+            onClick={openImport}
+            className="shrink-0 px-3 py-2 bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 text-slate-600 text-xs rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Import Excel
+          </button>
+          <button
+            onClick={handleExport} disabled={exporting || loading}
+            className="shrink-0 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs rounded-lg transition-colors disabled:opacity-50"
+          >
             {exporting ? "Mengekspor..." : "↓ Export Excel"}
           </button>
         </div>
@@ -371,26 +463,12 @@ export default function DashboardAdmin() {
                     <td className="px-4 py-3 text-slate-600">{s.kode_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-500 text-xs">
-                      {s.updated_at ? (
-                        new Date(s.updated_at).toLocaleString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      ) : (
-                        <span className="text-slate-300 italic">Belum diisi</span>
-                      )}
+                      {s.updated_at ? new Date(s.updated_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : <span className="text-slate-300 italic">Belum diisi</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
-                        <button onClick={() => openDetail(s)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
-                          Detail
-                        </button>
-                        <button onClick={() => openEdit(s)} className="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">
-                          Edit
-                        </button>
+                        <button onClick={() => openDetail(s)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">Detail</button>
+                        <button onClick={() => openEdit(s)} className="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">Edit</button>
                       </div>
                     </td>
                   </tr>
@@ -411,20 +489,10 @@ export default function DashboardAdmin() {
               <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
                 <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {new Date(s.created_at).toLocaleDateString("id-ID", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
+                <p className="text-xs text-slate-400 mt-0.5">{new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
                 <div className="mt-3 inline-flex w-full rounded-lg border border-slate-200 overflow-hidden">
-                  <button onClick={() => openDetail(s)} className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
-                    Detail
-                  </button>
-                  <button onClick={() => openEdit(s)} className="flex-1 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">
-                    Edit
-                  </button>
+                  <button onClick={() => openDetail(s)} className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">Detail</button>
+                  <button onClick={() => openEdit(s)} className="flex-1 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">Edit</button>
                 </div>
               </div>
             ))
@@ -443,35 +511,21 @@ export default function DashboardAdmin() {
                   <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">{selectedSatker.nama_satker}</h2>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => {
-                      setShowDetail(false);
-                      openEdit(selectedSatker);
-                    }}
-                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button onClick={() => setShowDetail(false)} className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">
-                    &times;
-                  </button>
+                  <button onClick={() => { setShowDetail(false); openEdit(selectedSatker); }} className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs rounded-lg border border-emerald-200 transition-colors">Edit</button>
+                  <button onClick={() => setShowDetail(false)} className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">&times;</button>
                 </div>
               </div>
               {selectedProfil && (
                 <div className="flex gap-1 mt-3">
                   {TABS.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeTab === tab.key ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                    >
+                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeTab === tab.key ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
                       {tab.label}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-
             <div className="overflow-y-auto px-5 py-4 flex-1">
               {profilLoading ? (
                 <div className="py-16 text-center text-sm text-slate-500">Memuat profil...</div>
@@ -479,13 +533,7 @@ export default function DashboardAdmin() {
                 <div className="py-16 text-center text-sm text-slate-500">Satker belum mengisi data profil.</div>
               ) : (
                 <>
-                  {activeTab === "kantor" && (
-                    <div>
-                      <InfoRow label="Alamat" value={selectedProfil.alamat} />
-                      <InfoRow label="No. Telepon" value={selectedProfil.no_telp} />
-                      <InfoRow label="Email" value={selectedProfil.email} />
-                    </div>
-                  )}
+                  {activeTab === "kantor" && <div><InfoRow label="Alamat" value={selectedProfil.alamat} /><InfoRow label="No. Telepon" value={selectedProfil.no_telp} /><InfoRow label="Email" value={selectedProfil.email} /></div>}
                   {activeTab === "pejabat" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <PejabatCard jabatan="KPA" nama={selectedProfil.nama_kpa} nip={selectedProfil.nip_kpa} hp={selectedProfil.hp_kpa} />
@@ -510,11 +558,8 @@ export default function DashboardAdmin() {
                 </>
               )}
             </div>
-
             <div className="px-5 py-3 border-t border-slate-100">
-              <button onClick={() => setShowDetail(false)} className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-                Tutup
-              </button>
+              <button onClick={() => setShowDetail(false)} className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">Tutup</button>
             </div>
           </div>
         </div>
@@ -531,23 +576,17 @@ export default function DashboardAdmin() {
                   <h2 className="text-sm font-semibold text-slate-800 mt-0.5 leading-snug break-words">{editSatker.nama_satker}</h2>
                   <p className="text-xs text-emerald-600 mt-0.5 font-medium">Mode Edit</p>
                 </div>
-                <button onClick={() => setShowEdit(false)} className="shrink-0 text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">
-                  &times;
-                </button>
+                <button onClick={() => setShowEdit(false)} className="shrink-0 text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">&times;</button>
               </div>
               <div className="flex gap-1 mt-3">
                 {TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setEditTab(tab.key)}
-                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${editTab === tab.key ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                  >
+                  <button key={tab.key} onClick={() => setEditTab(tab.key)}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${editTab === tab.key ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
                     {tab.label}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="overflow-y-auto px-5 py-4 flex-1">
               {editLoading ? (
                 <div className="py-16 text-center text-sm text-slate-500">Memuat data...</div>
@@ -557,13 +596,8 @@ export default function DashboardAdmin() {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">Alamat Kantor</label>
-                        <textarea
-                          value={editForm.alamat}
-                          onChange={(e) => setEditForm({ ...editForm, alamat: e.target.value })}
-                          rows={3}
-                          placeholder="Isi alamat kantor..."
-                          className="w-full px-3 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white transition-all resize-none"
-                        />
+                        <textarea value={editForm.alamat} onChange={(e) => setEditForm({ ...editForm, alamat: e.target.value })} rows={3} placeholder="Isi alamat kantor..."
+                          className="w-full px-3 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white transition-all resize-none" />
                       </div>
                       <FormField label="No. Telepon Kantor" value={editForm.no_telp} onChange={(v) => setEditForm({ ...editForm, no_telp: v })} />
                       <FormField label="Email Kantor" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
@@ -596,17 +630,136 @@ export default function DashboardAdmin() {
                 </>
               )}
             </div>
-
             <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
               {saveMsg && <p className={`text-xs flex-1 ${saveMsg.startsWith("✓") ? "text-emerald-600" : "text-red-500"}`}>{saveMsg}</p>}
               <div className="flex gap-2 ml-auto">
-                <button onClick={() => setShowEdit(false)} disabled={saving} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg transition-colors disabled:opacity-50">
-                  Batal
-                </button>
+                <button onClick={() => setShowEdit(false)} disabled={saving} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg transition-colors disabled:opacity-50">Batal</button>
                 <button onClick={handleSave} disabled={saving || editLoading} className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50">
                   {saving ? "Menyimpan..." : "Simpan"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Import Excel ───────────────────────────────────────────── */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+              <h2 className="text-sm font-bold text-slate-800">Import Data Profil dari Excel</h2>
+              <button onClick={() => setShowImport(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Info */}
+              <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-blue-700">
+                  Format file sama dengan hasil <strong>Export Excel</strong>. Gunakan file export sebagai template, isi datanya, lalu upload kembali. Data dicocokkan berdasarkan <strong>Kode Satker</strong>.
+                </p>
+              </div>
+
+              {/* Upload area */}
+              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-5 text-center">
+                <p className="text-sm font-medium text-slate-600 mb-1">Upload file Excel</p>
+                <p className="text-xs text-slate-400 mb-3">Format kolom sama dengan hasil Export Excel</p>
+                <div className="flex items-center justify-center gap-2">
+                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" />
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm rounded-lg transition-colors">
+                    Pilih File Excel
+                  </button>
+                  <button onClick={handleExport} disabled={exporting}
+                    className="px-4 py-2 bg-white border border-slate-200 hover:border-emerald-300 text-slate-500 hover:text-emerald-600 text-sm rounded-lg transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    {exporting ? "..." : "Export dulu"}
+                  </button>
+                </div>
+              </div>
+
+              {importRows.length > 0 && (
+                <>
+                  {/* Stats */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="bg-blue-50 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-blue-600">{pendingCount}</p>
+                      <p className="text-xs text-blue-400">Akan diupdate</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-green-600">{successCount}</p>
+                      <p className="text-xs text-green-400">Berhasil</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-amber-600">{skipCount}</p>
+                      <p className="text-xs text-amber-400">Dilewati</p>
+                    </div>
+                    <div className="bg-rose-50 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-rose-600">{errorCount}</p>
+                      <p className="text-xs text-rose-400">Error</p>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
+                  {importLoading && (
+                    <div>
+                      <div className="flex justify-between text-xs text-slate-500 mb-1">
+                        <span>Mengimport...</span>
+                        <span>{importProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview table */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
+                        <tr>
+                          <th className="text-left px-3 py-2 text-slate-500 font-medium">Kode</th>
+                          <th className="text-left px-3 py-2 text-slate-500 font-medium">Nama Satker</th>
+                          <th className="text-left px-3 py-2 text-slate-500 font-medium">Field Terisi</th>
+                          <th className="text-left px-3 py-2 text-slate-500 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {importRows.map((row, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 text-slate-600 font-mono">{row.kode_satker || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700 max-w-[180px] truncate" title={row.nama_satker}>{row.nama_satker || "-"}</td>
+                            <td className="px-3 py-2 text-slate-500">{Object.keys(row.profil).length} kolom</td>
+                            <td className="px-3 py-2">
+                              {row.status === "pending" && <span className="text-slate-400">Menunggu</span>}
+                              {row.status === "success" && <span className="text-green-600 font-medium">✓ Berhasil</span>}
+                              {row.status === "skip" && <span className="text-amber-500">— {row.error}</span>}
+                              {row.status === "error" && <span className="text-rose-500">✗ {row.error}</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {!importDone ? (
+                    <button onClick={handleImport} disabled={importLoading || pendingCount === 0}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+                      {importLoading ? `Mengimport... ${importProgress}%` : `Update ${pendingCount} Data Satker`}
+                    </button>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm text-green-600 font-medium mb-3">✓ Import selesai! {successCount} data profil berhasil diperbarui.</p>
+                      <button onClick={() => setShowImport(false)} className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm rounded-lg transition-colors">Tutup</button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
