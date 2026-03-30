@@ -18,11 +18,11 @@ type ModalType = "tambah" | "reset-password" | "hapus" | "import" | null;
 type ImportRow = {
   kode_satker: string;
   nama_satker: string;
-  nama_lama?: string; // nama sebelumnya jika berbeda
-  kode_lama?: string; // kode sebelumnya jika kode berubah
+  nama_lama?: string;   // nama sebelumnya jika berbeda
+  kode_lama?: string;   // kode sebelumnya jika kode berubah
   status: "pending" | "update" | "success" | "error" | "duplicate";
   error?: string;
-  existingId?: string; // id satker yang sudah ada, untuk PATCH
+  existingId?: string;  // id satker yang sudah ada, untuk PATCH
   updateFields?: "nama" | "kode" | "kode_nama"; // apa yang perlu diupdate
 };
 
@@ -34,6 +34,7 @@ const NAV_ITEMS = [
 export default function KelolaUser() {
   const [satkerList, setSatkerList] = useState<Satker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [modalType, setModalType] = useState<ModalType>(null);
   const [selectedSatker, setSelectedSatker] = useState<Satker | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -151,47 +152,24 @@ export default function KelolaUser() {
           status: "pending",
         }));
 
-      // Map kode → satker & nama → satker untuk double matching
+      // Match berdasarkan kode satker saja — nama boleh sama
       const existingByKode = new Map(satkerList.map((s) => [s.kode_satker, s]));
-      const existingByNama = new Map(satkerList.map((s) => [s.nama_satker.toUpperCase(), s]));
       const seen = new Set<string>();
 
       const marked = parsed.map((row) => {
-        // Duplikat dalam file Excel itu sendiri
-        if (seen.has(row.kode_satker)) return { ...row, status: "duplicate" as const, error: "Duplikat dalam file" };
+        if (seen.has(row.kode_satker))
+          return { ...row, status: "duplicate" as const, error: "Duplikat dalam file" };
         seen.add(row.kode_satker);
 
-        // 1. Match berdasarkan kode
         const byKode = existingByKode.get(row.kode_satker);
         if (byKode) {
           if (byKode.nama_satker !== row.nama_satker) {
-            // Kode sama, nama beda → update nama
-            return {
-              ...row,
-              status: "update" as const,
-              nama_lama: byKode.nama_satker,
-              existingId: byKode.id,
-              updateFields: "nama" as const,
-            };
+            return { ...row, status: "update" as const, nama_lama: byKode.nama_satker, existingId: byKode.id, updateFields: "nama" as const };
           }
-          // Kode sama, nama sama → skip
           return { ...row, status: "duplicate" as const, error: "Data sama, tidak ada perubahan" };
         }
 
-        // 2. Kode tidak ketemu — coba match berdasarkan nama
-        const byNama = existingByNama.get(row.nama_satker.toUpperCase());
-        if (byNama) {
-          // Nama sama tapi kode berbeda → kode yang berubah, update kode (& nama tetap sama)
-          return {
-            ...row,
-            status: "update" as const,
-            kode_lama: byNama.kode_satker,
-            existingId: byNama.id,
-            updateFields: "kode" as const,
-          };
-        }
-
-        // 3. Tidak ketemu sama sekali → tambah baru
+        // Kode tidak ketemu → tambah baru (nama boleh sama dengan satker lain)
         return row;
       });
 
@@ -278,39 +256,86 @@ export default function KelolaUser() {
   const errorCount = importRows.filter((r) => r.status === "error").length;
   const duplicateCount = importRows.filter((r) => r.status === "duplicate").length;
 
-  const inputCls = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+  const filtered = satkerList.filter(
+    (s) =>
+      s.nama_satker?.toLowerCase().includes(search.toLowerCase()) ||
+      s.kode_satker?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const inputCls =
+    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header nama="Sarana Penyelesaian Dokumen Organisasi" sub="KPPN Medan I" userLabel="Administrator" userRole="KPPN" onLogout={handleLogout} navItems={NAV_ITEMS} />
+      <Header
+        nama="Sistem Informasi Satuan Kerja"
+        sub="KPPN Medan I"
+        userLabel="Administrator"
+        userRole="KPPN"
+        onLogout={handleLogout}
+        navItems={NAV_ITEMS}
+      />
 
       <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg md:text-xl font-bold text-slate-800">Kelola User</h1>
             <p className="text-sm text-slate-500 mt-1">Tambah, reset password, atau hapus akun satker</p>
+            {!loading && (
+              <p className="text-xs text-slate-400 mt-1">
+                <span className="font-semibold text-slate-600">
+                  {search ? `${filtered.length} dari ${satkerList.length}` : satkerList.length}
+                </span> akun terdaftar
+              </p>
+            )}
           </div>
           {/* Dua tombol: Upload Excel + Tambah */}
           <div className="flex gap-2 shrink-0">
-            <button onClick={() => openModal("import")} className="px-3 md:px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5">
+            <button
+              onClick={() => openModal("import")}
+              className="px-3 md:px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5"
+            >
               <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span className="hidden md:inline">Upload Excel</span>
               <span className="md:hidden">Excel</span>
             </button>
-            <button onClick={() => openModal("tambah")} className="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <button
+              onClick={() => openModal("tambah")}
+              className="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
               + Tambah
             </button>
           </div>
+        </div>
+
+        {/* Search box */}
+        <div className="mt-4 relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama atau kode satker..."
+            className="w-full pl-9 pr-10 py-2 text-sm text-slate-800 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white transition-all"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg leading-none">
+              &times;
+            </button>
+          )}
         </div>
 
         {/* Table — desktop */}
         <div className="mt-4 md:mt-6 bg-white rounded-xl border border-slate-200 overflow-hidden hidden md:block">
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
-          ) : satkerList.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">Belum ada satker</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500">
+              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker"}
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -322,7 +347,7 @@ export default function KelolaUser() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {satkerList.map((s) => (
+                {filtered.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-600 font-mono text-xs">{s.kode_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
@@ -341,10 +366,16 @@ export default function KelolaUser() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
-                        <button onClick={() => openModal("reset-password", s)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
+                        <button
+                          onClick={() => openModal("reset-password", s)}
+                          className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200"
+                        >
                           Reset Password
                         </button>
-                        <button onClick={() => openModal("hapus", s)} className="px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors">
+                        <button
+                          onClick={() => openModal("hapus", s)}
+                          className="px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors"
+                        >
                           Hapus
                         </button>
                       </div>
@@ -360,10 +391,12 @@ export default function KelolaUser() {
         <div className="mt-4 space-y-2 md:hidden">
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-500">Memuat data...</div>
-          ) : satkerList.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">Belum ada satker</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500">
+              {search ? `Tidak ada satker dengan kata kunci "${search}"` : "Belum ada satker"}
+            </div>
           ) : (
-            satkerList.map((s) => (
+            filtered.map((s) => (
               <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
                 <p className="text-xs text-slate-500 mt-1">Kode: {s.kode_satker || "-"}</p>
@@ -375,10 +408,16 @@ export default function KelolaUser() {
                   })}
                 </p>
                 <div className="mt-3 inline-flex w-full rounded-lg border border-slate-200 overflow-hidden">
-                  <button onClick={() => openModal("reset-password", s)} className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
+                  <button
+                    onClick={() => openModal("reset-password", s)}
+                    className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200"
+                  >
                     Reset Password
                   </button>
-                  <button onClick={() => openModal("hapus", s)} className="flex-1 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors">
+                  <button
+                    onClick={() => openModal("hapus", s)}
+                    className="flex-1 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors"
+                  >
                     Hapus
                   </button>
                 </div>
@@ -391,7 +430,11 @@ export default function KelolaUser() {
       {/* Modal */}
       {modalType && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className={`bg-white rounded-t-2xl md:rounded-2xl shadow-xl w-full ${modalType === "import" ? "md:max-w-2xl" : "md:max-w-md"} max-h-[90vh] overflow-y-auto`}>
+          <div
+            className={`bg-white rounded-t-2xl md:rounded-2xl shadow-xl w-full ${
+              modalType === "import" ? "md:max-w-2xl" : "md:max-w-md"
+            } max-h-[90vh] overflow-y-auto`}
+          >
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
               <h2 className="text-sm font-bold text-slate-800">
                 {modalType === "tambah" && "Tambah Satker Baru"}
@@ -405,26 +448,50 @@ export default function KelolaUser() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              {modalError && <div className="px-4 py-3 bg-rose-50 border border-rose-200 text-rose-600 text-sm rounded-lg">{modalError}</div>}
+              {modalError && (
+                <div className="px-4 py-3 bg-rose-50 border border-rose-200 text-rose-600 text-sm rounded-lg">
+                  {modalError}
+                </div>
+              )}
 
               {/* Modal Tambah */}
               {modalType === "tambah" && (
                 <>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">Nama Satker</label>
-                    <input value={formNama} onChange={(e) => setFormNama(e.target.value)} placeholder="Nama instansi/satker" className={inputCls} />
+                    <input
+                      value={formNama}
+                      onChange={(e) => setFormNama(e.target.value)}
+                      placeholder="Nama instansi/satker"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       Kode Satker <span className="text-slate-400">(digunakan sebagai username)</span>
                     </label>
-                    <input value={formKode} onChange={(e) => setFormKode(e.target.value)} placeholder="Contoh: 019364" className={inputCls} />
+                    <input
+                      value={formKode}
+                      onChange={(e) => setFormKode(e.target.value)}
+                      placeholder="Contoh: 019364"
+                      className={inputCls}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">Password</label>
-                    <input type="password" value={formPassword} onChange={(e) => setFormPassword(e.target.value)} placeholder="Minimal 6 karakter" className={inputCls} />
+                    <input
+                      type="password"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder="Minimal 6 karakter"
+                      className={inputCls}
+                    />
                   </div>
-                  <button onClick={handleTambah} disabled={modalLoading} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+                  <button
+                    onClick={handleTambah}
+                    disabled={modalLoading}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
                     {modalLoading ? "Menyimpan..." : "Tambah Satker"}
                   </button>
                 </>
@@ -434,13 +501,25 @@ export default function KelolaUser() {
               {modalType === "reset-password" && (
                 <>
                   <p className="text-xs text-slate-500">
-                    Password baru untuk <strong className="text-slate-700">{selectedSatker?.nama_satker}</strong> ({selectedSatker?.kode_satker}).
+                    Password baru untuk{" "}
+                    <strong className="text-slate-700">{selectedSatker?.nama_satker}</strong> (
+                    {selectedSatker?.kode_satker}).
                   </p>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">Password Baru</label>
-                    <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Minimal 6 karakter" className={inputCls} />
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimal 6 karakter"
+                      className={inputCls}
+                    />
                   </div>
-                  <button onClick={handleResetPassword} disabled={modalLoading} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={modalLoading}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
                     {modalLoading ? "Menyimpan..." : "Reset Password"}
                   </button>
                 </>
@@ -450,13 +529,21 @@ export default function KelolaUser() {
               {modalType === "hapus" && (
                 <>
                   <p className="text-sm text-slate-600">
-                    Yakin ingin menghapus <strong>{selectedSatker?.nama_satker}</strong> ({selectedSatker?.kode_satker})? Semua data akan terhapus.
+                    Yakin ingin menghapus <strong>{selectedSatker?.nama_satker}</strong> (
+                    {selectedSatker?.kode_satker})? Semua data akan terhapus.
                   </p>
                   <div className="flex gap-3 pb-2">
-                    <button onClick={closeModal} className="flex-1 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <button
+                      onClick={closeModal}
+                      className="flex-1 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
                       Batal
                     </button>
-                    <button onClick={handleHapus} disabled={modalLoading} className="flex-1 py-2 text-sm bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50">
+                    <button
+                      onClick={handleHapus}
+                      disabled={modalLoading}
+                      className="flex-1 py-2 text-sm bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
                       {modalLoading ? "Menghapus..." : "Hapus"}
                     </button>
                   </div>
@@ -479,10 +566,31 @@ export default function KelolaUser() {
                   {/* Upload area */}
                   <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-5 text-center">
                     <p className="text-sm font-medium text-slate-600 mb-1">Upload file Excel</p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Kolom A = Kode Satker, Kolom B = Nama Satker (baris pertama = header)
+                    </p>
                     <div className="flex items-center justify-center gap-2">
-                      <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" />
-                      <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm rounded-lg transition-colors">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm rounded-lg transition-colors"
+                      >
                         Pilih File Excel
+                      </button>
+                      <button
+                        onClick={handleDownloadTemplate}
+                        className="px-4 py-2 bg-white border border-slate-200 hover:border-emerald-300 text-slate-500 hover:text-emerald-600 text-sm rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Template
                       </button>
                     </div>
                   </div>
@@ -521,7 +629,10 @@ export default function KelolaUser() {
                             <span>{importProgress}%</span>
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }} />
+                            <div
+                              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${importProgress}%` }}
+                            />
                           </div>
                         </div>
                       )}
@@ -546,7 +657,11 @@ export default function KelolaUser() {
                                   {row.status === "update" && (
                                     <span className="text-violet-600 font-medium">
                                       {row.updateFields === "kode" ? "✎ Ganti kode" : "✎ Ganti nama"}
-                                      {row.updateFields === "kode" && row.kode_lama && <span className="block text-violet-400 font-normal">dari: {row.kode_lama}</span>}
+                                      {row.updateFields === "kode" && row.kode_lama && (
+                                        <span className="block text-violet-400 font-normal">
+                                          dari: {row.kode_lama}
+                                        </span>
+                                      )}
                                       {row.updateFields === "nama" && row.nama_lama && (
                                         <span className="block text-violet-400 font-normal truncate max-w-[140px]" title={row.nama_lama}>
                                           dari: {row.nama_lama}
@@ -567,19 +682,22 @@ export default function KelolaUser() {
                       {!importDone ? (
                         <button
                           onClick={handleImport}
-                          disabled={modalLoading || pendingCount + updateCount === 0}
+                          disabled={modalLoading || (pendingCount + updateCount) === 0}
                           className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                         >
-                          {modalLoading ? `Mengimport... ${importProgress}%` : `Proses ${pendingCount + updateCount} Data${updateCount > 0 ? ` (${pendingCount} baru · ${updateCount} update nama)` : ""}`}
+                          {modalLoading
+                            ? `Mengimport... ${importProgress}%`
+                            : `Proses ${pendingCount + updateCount} Data${updateCount > 0 ? ` (${pendingCount} baru · ${updateCount} update nama)` : ""}`}
                         </button>
                       ) : (
                         <div className="text-center">
                           <p className="text-sm text-green-600 font-medium mb-3">
-                            ✓ Selesai! {successCount} data diproses ({pendingCount > 0 ? `${pendingCount} baru` : ""}
-                            {pendingCount > 0 && updateCount > 0 ? ", " : ""}
-                            {updateCount > 0 ? `${updateCount} nama diperbarui` : ""}).
+                            ✓ Selesai! {successCount} data diproses ({pendingCount > 0 ? `${pendingCount} baru` : ""}{pendingCount > 0 && updateCount > 0 ? ", " : ""}{updateCount > 0 ? `${updateCount} nama diperbarui` : ""}).
                           </p>
-                          <button onClick={closeModal} className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm rounded-lg transition-colors">
+                          <button
+                            onClick={closeModal}
+                            className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm rounded-lg transition-colors"
+                          >
                             Tutup
                           </button>
                         </div>

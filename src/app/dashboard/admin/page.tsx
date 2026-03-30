@@ -462,7 +462,7 @@ export default function DashboardAdmin() {
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-600">{s.kode_satker || "-"}</td>
                     <td className="px-4 py-3 text-slate-800 font-medium">{s.nama_satker || "-"}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">
+                    <td className="px-4 py-3 text-slate-500 text-xs" suppressHydrationWarning>
                       {s.updated_at ? new Date(s.updated_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : <span className="text-slate-300 italic">Belum diisi</span>}
                     </td>
                     <td className="px-4 py-3">
@@ -489,7 +489,7 @@ export default function DashboardAdmin() {
               <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800 break-words">{s.nama_satker || "-"}</p>
                 <p className="text-xs text-slate-500 mt-1">Kode Satker: {s.kode_satker || "-"}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                <p className="text-xs text-slate-400 mt-0.5" suppressHydrationWarning>{new Date(s.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
                 <div className="mt-3 inline-flex w-full rounded-lg border border-slate-200 overflow-hidden">
                   <button onClick={() => openDetail(s)} className="flex-1 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">Detail</button>
                   <button onClick={() => openEdit(s)} className="flex-1 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors">Edit</button>
