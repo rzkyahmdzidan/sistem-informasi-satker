@@ -18,12 +18,12 @@ type ModalType = "tambah" | "reset-password" | "hapus" | "import" | null;
 type ImportRow = {
   kode_satker: string;
   nama_satker: string;
-  nama_lama?: string;   // nama sebelumnya jika berbeda
-  kode_lama?: string;   // kode sebelumnya jika kode berubah
+  nama_lama?: string;   
+  kode_lama?: string;  
   status: "pending" | "update" | "success" | "error" | "duplicate";
   error?: string;
-  existingId?: string;  // id satker yang sudah ada, untuk PATCH
-  updateFields?: "nama" | "kode" | "kode_nama"; // apa yang perlu diupdate
+  existingId?: string;
+  updateFields?: "nama" | "kode" | "kode_nama";
 };
 
 const NAV_ITEMS = [
@@ -152,7 +152,6 @@ export default function KelolaUser() {
           status: "pending",
         }));
 
-      // Match berdasarkan kode satker saja — nama boleh sama
       const existingByKode = new Map(satkerList.map((s) => [s.kode_satker, s]));
       const seen = new Set<string>();
 
@@ -169,7 +168,6 @@ export default function KelolaUser() {
           return { ...row, status: "duplicate" as const, error: "Data sama, tidak ada perubahan" };
         }
 
-        // Kode tidak ketemu → tambah baru (nama boleh sama dengan satker lain)
         return row;
       });
 
@@ -193,7 +191,6 @@ export default function KelolaUser() {
       let res: Response;
 
       if (updated[i].status === "update") {
-        // Tentukan field apa yang diupdate
         const patchBody: Record<string, string> = { id: updated[i].existingId! };
         if (updated[i].updateFields === "nama" || updated[i].updateFields === "kode_nama") {
           patchBody.nama_satker = updated[i].nama_satker;
@@ -201,7 +198,6 @@ export default function KelolaUser() {
         if (updated[i].updateFields === "kode" || updated[i].updateFields === "kode_nama") {
           patchBody.kode_satker = updated[i].kode_satker;
         }
-        // Default fallback — update nama
         if (!updated[i].updateFields) {
           patchBody.nama_satker = updated[i].nama_satker;
         }
@@ -212,7 +208,6 @@ export default function KelolaUser() {
           body: JSON.stringify(patchBody),
         });
       } else {
-        // Tambah baru — POST, password = kode satker
         res = await fetch("/api/satker/user", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -289,7 +284,6 @@ export default function KelolaUser() {
               </p>
             )}
           </div>
-          {/* Dua tombol: Upload Excel + Tambah */}
           <div className="flex gap-2 shrink-0">
             <button
               onClick={() => openModal("import")}
@@ -309,8 +303,6 @@ export default function KelolaUser() {
             </button>
           </div>
         </div>
-
-        {/* Search box */}
         <div className="mt-4 relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
